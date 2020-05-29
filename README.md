@@ -23,7 +23,7 @@ You'll notice above I mentioned that js/savedata.js file.  It calls on two PHP s
 Regardless, just as I am not providing hosting for the experiment for you, I'm not hosting your data either. You don't want me to.
 
 # Installing
-Once you've done your `git clone https://github.com/celstark/cordova_cMST.git` and
+Once you've done your `git clone https://github.com/celstark/MSTonline.git` and
 have this in place, you'll need to install Cordova (if you want to roll that way)
 and then at least setup the browser target:
 
