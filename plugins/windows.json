@@ -8,13 +8,13 @@
   },
   "installed_plugins": {
     "cordova-plugin-device": {
-      "PACKAGE_NAME": "cMST"
+      "PACKAGE_NAME": "MSTonline"
     },
     "cordova-plugin-file": {
-      "PACKAGE_NAME": "cMST"
+      "PACKAGE_NAME": "MSTonline"
     },
     "cordova-plugin-whitelist": {
-      "PACKAGE_NAME": "cMST"
+      "PACKAGE_NAME": "MSTonline"
     }
   },
   "dependent_plugins": {}

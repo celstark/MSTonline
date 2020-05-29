@@ -8,13 +8,13 @@
   },
   "installed_plugins": {
     "cordova-plugin-device": {
-      "PACKAGE_NAME": "edu.uci.cMST"
+      "PACKAGE_NAME": "edu.uci.MSTonline"
     },
     "cordova-plugin-file": {
-      "PACKAGE_NAME": "edu.uci.cMST"
+      "PACKAGE_NAME": "edu.uci.MSTonline"
     },
     "cordova-plugin-whitelist": {
-      "PACKAGE_NAME": "edu.uci.cMST"
+      "PACKAGE_NAME": "edu.uci.MSTonline"
     }
   },
   "dependent_plugins": {}
