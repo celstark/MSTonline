@@ -1,0 +1,21 @@
+{
+  "prepare_queue": {
+    "installed": [],
+    "uninstalled": []
+  },
+  "config_munge": {
+    "files": {}
+  },
+  "installed_plugins": {
+    "cordova-plugin-device": {
+      "PACKAGE_NAME": "cMST"
+    },
+    "cordova-plugin-file": {
+      "PACKAGE_NAME": "cMST"
+    },
+    "cordova-plugin-whitelist": {
+      "PACKAGE_NAME": "cMST"
+    }
+  },
+  "dependent_plugins": {}
+}

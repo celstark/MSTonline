@@ -1,0 +1,7 @@
+
+misc/database_config.php
+*.pptx
+*.gdoc
+platforms/
+platforms/*
+Data/

@@ -1,0 +1,11 @@
+I/O - keyboard
+“In this part, we want you to look at some pictures. When the computer program starts, it will show you pictures on the screen one by one. For each picture that you see, I want you to decide whether the item you see is tyipcally an indoor item or an outdoor item. Indicate "indoor" by pressing the V key on the keyboard and outdoor by pressing the N key. These are just handy in that you can use your two index fingers easily. There will be a reminder on the screen to help you remember you what buttons to push. 
+
+Now sometimes it's not always going to be clear what you *should* say. Is an apple an indoor or outdoor item?  Don't over-think this, just go with your initial impression of where you would typically see it."
+
+--------------
+I/O - buttons
+“In this part, we want you to look at some pictures. When the computer program starts, it will show you pictures on the screen one by one. For each picture that you see, I want you to decide whether the item you see is tyipcally an indoor item or an outdoor item. Buttons will be on the screen for each response and just click on the indoor or outdoor button to make your choice. 
+
+Now sometimes it's not always going to be clear what you *should* say. Is an apple an indoor or outdoor item?  Don't over-think this, just go with your initial impression of where you would typically see it."
+--------------

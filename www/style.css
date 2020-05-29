@@ -1,0 +1,41 @@
+div{
+    font-family: 'Archivo Narrow', sans-serif;
+    display: inline-block
+}
+h1{
+    font-family: 'Archivo Narrow', sans-serif; 
+}
+table.ParamTable{
+    font-family: 'Archivo Narrow', sans-serif; 
+    width: 100%;
+    border-collapse: collapse;
+    border-width: 1px;
+}
+table.ParamTable td, table.ParamTable th {
+    border-width: 1px;
+    padding: 5px;
+    line-height: 125%;
+}
+table.ParamTable thead {
+    text-align: left;
+}
+body{
+    background-color: white;
+    font-size: 18pt;
+}
+input{
+    background-color: blanchedalmond;
+    font-size: 18pt;
+}
+input.radiobtn {
+    transform:scale(1.25);
+    background-color: navy;
+}
+input:hover{
+    outline-color: black;
+    outline-style: ridge;
+    outline-width: 1px;
+}
+p{
+    font-family: 'Archivo Narrow', sans-serif; 
+}

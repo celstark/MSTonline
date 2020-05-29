@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+  <!--
+  Task: Configuration page for the cMST
+  Author: Gavin Stark
+
+  Forked from main cMST-Online on 11/20/19 and modified for mobile / Cordova
+
+  Revised: 
+    November 20, 2019 (CELS) for Cordova
+    12/6/2019 (CELS): Reformatted to make prettier
+  -->
+<head>
+  <!--<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content:;">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="msapplication-tap-highlight" content="no">-->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:  'unsafe-inline' 'unsafe-eval' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css; media-src *; img-src 'self' data: content:;">
+
+  <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
+  <title>cMST Parameters</title>
+  <script type="text/javascript" src="cordova.js"></script>
+  <script type="text/javascript" src="js/index.js"></script>
+  <link href="style.css" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Inconsolata&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Barriecito|Inconsolata&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Archivo+Narrow&display=swap" rel="stylesheet">
+</head>
+<script>
+
+
+</script>
+<body id = 'body'>
+    
+    <h1> MST overall parameters</h1>
+    <form action="exp_launcher.html" method="get">
+      <table class="ParamTable">
+        <tr>
+          <td>Subj ID: <input type="text" name="sid" value="12000"></td>
+          <td>Base order (1-4): <input type="number" name="order" min="1" max="4" value=1></td>
+        </tr>
+        <tr>
+          <td>Resp mode: 
+              <input type="radio" class="radiobtn" name="resp" value="k"> keyboard 
+              <input type="radio" class="radiobtn" name="resp" value="b" checked> button</td>
+          <td># Stim per: 
+              <input type="radio" class="radiobtn" name="nstimper" value="32"> 32 
+              <input type="radio" class="radiobtn" name="nstimper" value="64" checked> 64</td>
+          </td>
+
+        </tr>
+        <tr>
+<!--          <td>Set (1-6): <input type="number" name="set" min="1" max="6" value=1></td>-->
+          <td>Set: 
+              <input type="radio" class="radiobtn" name="set" value="1" checked>1 
+              <input type="radio" class="radiobtn" name="set" value="2"> 2
+              <input type="radio" class="radiobtn" name="set" value="3"> 3
+              <input type="radio" class="radiobtn" name="set" value="4"> 4
+              <input type="radio" class="radiobtn" name="set" value="5"> 5
+              <input type="radio" class="radiobtn" name="set" value="6"> 6
+          </td>
+
+          <td>Subset (if < 64): 
+            <input type="radio" class="radiobtn" name="subset" value="a" checked> a 
+            <input type="radio" class="radiobtn" name="subset" value="b" > b</td>
+          </td>
+    
+ 
+        </tr>
+      </table>
+
+    <p>Response choices: 
+      <input type="radio" class="radiobtn" name="twochoice" value="0"> 2 
+      <input type="radio" class="radiobtn" name="twochoice" value="1" checked> 3 </p>
+    <p>Self-paced: 
+      <input type="radio" class="radiobtn" name="selfpaced" value="0" checked> No 
+      <input type="radio" class="radiobtn" name="selfpaced" value="1"> Yes </p>
+   
+    <table class="ParamTable">
+      <thead>
+        <tr>
+        <th>Initial task</th>
+        <th>Post MST-Study</th>
+        <th>Post MST-Test</th>
+      </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><input type='radio' class="radiobtn" name='q_start' value='msts' checked> MST-Study <br>
+            <input type='radio' class="radiobtn" name='q_start' value='mstt'> MST-Test <br>
+            </td>
+          <td><input type='radio' class="radiobtn" name='q_msts' value='end'> End <br>
+            <input type='radio' class="radiobtn" name='q_msts' value='mstt' checked> MST-Test <br>
+            </td>
+          <td><input type='radio' class="radiobtn" name='q_mstt' value='end' checked> End <br>
+            </td>
+
+        </tr>
+      </tbody>
+
+
+  </table>
+
+    <p><input type="submit" value="START" style="font-size: 16pt; width:100%"></p>
+    <script>
+        function getResolution() {
+          alert("Your " + device.platform + " screen resolution is: " + screen.width + "x" + screen.height );
+        }
+    </script>
+         
+    <button type="button" onclick="getResolution();">Get Resolution</button>
+    <div><p>Last update 5/29/2020 0.1</p></div>
+</form>
+<!--
+<div class="app">
+    <div id="deviceready" class="blink">
+        <p class="event listening">Connecting to Device</p>
+        <p class="event received">Device is Ready</p>
+    </div>
+</div>
+-->
+
+<!--
+<script>
+  function destroy(){
+    document.getElementById('nothing').hidden=true
+
+  }  
+  destroy()
+
+</script>
+-->
+</body>
+
+
+
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+ <!--
+  Task: MST - Study phase 
+  Author: Craig Stark
+  Based on the PsychoPy variant for online delivery we've been using for awhile, but that was
+    very clunky.  This loads the same order files that one did though, so we can smoothly move
+    over.  Wrote a little Python script to convert those .csv into the .js files needed here.
+    (ConvertOrdersCSVtoJS.py)
+
+  Forked from Cordova cMST on 4/2/2020, using that as a basis
+
+
+  Optional parameters:
+  [sid=##]: Subject ID -- used for data file name (default=1234)
+  [resp=X]: Response mode -- set to 'b' to use buttons, anything else to use keys (default=keyboard)
+  [set=#]: Stimulus set -- 1-6 (1=default) -- used in loading the order file
+  [mstset=#]: As-above, but overrides.  Useful if using with the cMST
+  [order=XX]: Which base order file? (1-4, 1=default)  -- controls ordering of conditions in a run
+  [nstimper=XX]: How many per old/sim/new are we using? 64 or 32 (64=default)
+  [subset=X]: Which subset are we using (if <64 on nstimper) '', a or b (''=default)
+  [q_msts=pagename]: Base of HTML filename to add into the queue after this task (default=null)
+  [selfpaced=X]: Should we allow infinite time with blank screen to make the response? (default =0)
+  Example:
+  mst_s.html?sid=12100&resp=b&set=2&nstimper='32'&order=1
+
+  Will save data in msts_SID_DATECODE.csv
+
+  Note - needs order files in 'jsOrder' and needs image files in 'Set #_rs'
+  order files are MST_[nstimper]_s[set]_p1_o[order][a,b]
+
+  [twochoice=#]: Use old/new instead of old/similar/new? (default=0)
+-->
+
+<head>
+ <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:  'unsafe-inline' 'unsafe-eval' 
+        https://fonts.gstatic.com http://www.stark-labs.com/exp/jsPsych/mobile_cMST/append_log.php http://www.stark-labs.com/exp/jsPsych/mobile_cMST/write_data_file.php; 
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css; media-src *; 
+      img-src 'self' data: content:;">
+      
+  <script type="text/javascript" src="cordova.js"></script>
+  <script type="text/javascript" src="js/index.js"></script>
+  <script src="js/jspsych.js"></script>
+  <script src="js/plugins/jspsych-html-keyboard-response.js"></script>
+  <script src="js/plugins/jspsych-image-keyboard-response.js"></script>
+  <script src="js/plugins/jspsych-html-button-response.js"></script>
+  <script src="js/plugins/jspsych-image-button-response.js"></script>
+  <script src="js/plugins/jspsych-audio-button-response.js"></script>
+  <script src="js/plugins/jspsych-audio-keyboard-response.js"></script>
+  <script src="js/savedata.js"> </script>
+  <link rel="stylesheet" href="css/jspsych.css"></link>
+  <style>
+    .jspsych-display-element {
+      font-size: 200%;
+    }
+    .jspsych-btn {
+      font-size: 150%;
+    }
+  </style>
+</head>
+<body></body>
+<!-- Take care of passed in variables  -->
+<script>
+const phasename='msts';
+var sid=1234;
+if (typeof jsPsych.data.getURLVariable('sid') != 'undefined') {
+    sid=jsPsych.data.getURLVariable('sid');
+}
+jsPsych.data.addProperties({
+    subject: sid,
+});  
+
+// if(typeof jsPsych.data.getURLVariable('sid') == 'undefined'){
+//     window.location = window.location + '?sid=1234';
+// }
+// jsPsych.data.addProperties({
+//     subject: jsPsych.data.getURLVariable('sid'),
+// });  
+// console.log(JSON.stringify(jsPsych.data.urlVariables()));
+// console.log(jsPsych.data.getURLVariable('sid'))
+var resp_mode = 'keyboard';
+if (jsPsych.data.getURLVariable('resp') == 'b') {
+    resp_mode = 'button'
+}
+var selfpaced=0;
+if (typeof jsPsych.data.getURLVariable('selfpaced') != 'undefined') {
+    selfpaced=jsPsych.data.getURLVariable('selfpaced');
+}
+var stim_set='1';
+//console.log('asdf: '+ jsPsych.data.getURLVariable('stim') + 'sadf')
+if (typeof jsPsych.data.getURLVariable('set') != 'undefined') {
+    stim_set=jsPsych.data.getURLVariable('set');
+}
+if (typeof jsPsych.data.getURLVariable('mstset') != 'undefined') {  // over-ride even "set"
+    stim_set=jsPsych.data.getURLVariable('mstset');
+}
+var order='1';
+if (typeof jsPsych.data.getURLVariable('order') != 'undefined') {
+    order=jsPsych.data.getURLVariable('order');
+}
+var nstimper='64';
+if (typeof jsPsych.data.getURLVariable('nstimper') != 'undefined') {
+    nstimper=jsPsych.data.getURLVariable('nstimper');
+}
+var subset='';
+if (typeof jsPsych.data.getURLVariable('subset') != 'undefined') {
+    subset=jsPsych.data.getURLVariable('subset');
+}
+if (nstimper=='32' && subset=='') {
+    subset='a';
+}
+if (nstimper=='64') {
+    subset='';
+}
+var orderfile = 'jsOrders/MST_' + nstimper + '_s'+stim_set+'_p1_o'+order+subset+'.js'
+
+var DEBUGMODE=0;
+</script>
+<!-- Load the .js order file with this subject's info --> 
+<script type="text/javascript">
+    document.write('<script type="text/javascript" src="' + orderfile + '"><\/script>');
+</script>
+
+<script>
+function invNormcdf(p) { // https://stackoverflow.com/questions/8816729/javascript-equivalent-for-inverse-normal-function-eg-excels-normsinv-or-nor
+    var a1 = -39.6968302866538, a2 = 220.946098424521, a3 = -275.928510446969;
+    var a4 = 138.357751867269, a5 = -30.6647980661472, a6 = 2.50662827745924;
+    var b1 = -54.4760987982241, b2 = 161.585836858041, b3 = -155.698979859887;
+    var b4 = 66.8013118877197, b5 = -13.2806815528857, c1 = -7.78489400243029E-03;
+    var c2 = -0.322396458041136, c3 = -2.40075827716184, c4 = -2.54973253934373;
+    var c5 = 4.37466414146497, c6 = 2.93816398269878, d1 = 7.78469570904146E-03;
+    var d2 = 0.32246712907004, d3 = 2.445134137143, d4 = 3.75440866190742;
+    var p_low = 0.02425, p_high = 1 - p_low;
+    var q, r;
+    var retVal;
+
+    if ((p < 0) || (p > 1))
+    {
+        alert("NormSInv: Argument out of range.");
+        retVal = 0;
+    }
+    else if (p < p_low)
+    {
+        q = Math.sqrt(-2 * Math.log(p));
+        retVal = (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+    }
+    else if (p <= p_high)
+    {
+        q = p - 0.5;
+        r = q * q;
+        retVal = (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1);
+    }
+    else
+    {
+        q = Math.sqrt(-2 * Math.log(1 - p));
+        retVal = -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+    }
+
+    return retVal;
+}
+
+document.addEventListener("deviceready", onDeviceReady, false);
+function onDeviceReady() {
+    console.log(JSON.stringify(jsPsych.data.urlVariables()));
+    console.log('SID: ' + sid)
+    console.log('Response mode: ' + resp_mode);
+    console.log('Self-paced: ' + selfpaced);
+    console.log('Stim set: ' + stim_set)
+    console.log('N Stim per:' + nstimper + subset)
+    console.log('Order: ' + order)
+    console.log(orderfile)
+    console.log(invNormcdf(0.2))
+
+    // let foo=(selfpaced==1 ? 'self' : 'fixed');
+    // console.log(foo);
+
+    let date = new Date(); 
+    let dcode = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + (date.getDate()+1) + 
+        "-" + date.getHours() + "-" + date.getMinutes() + "-" + date.getSeconds();
+
+    // add this run's start to the log file
+    if (DEBUGMODE == 0) { 
+        appendLog(phasename,'Start: ' + date.toISOString() + JSON.stringify(jsPsych.data.urlVariables()) ); 
+        if (device.platform == 'iOS') {
+        appendLocalLog(phasename,'Start: ' + date.toISOString() + JSON.stringify(jsPsych.data.urlVariables()) ); 
+        }
+    }
+
+    function leftFillNum(num, width){
+	    return num
+			.toString()
+			.padStart(width,0)
+    }
+    // Default is keyboard here - override if buttons
+    var instr_choice=[32]; // 32 is space
+    var instr_txt='<i>spacebar</i>';
+    var trial_txt='Indoor(<b>v</b>) or Outdoor(<b>n</b>)';
+//    var trial_choices=['i','o'];
+    var trial_choices=['v','n'];
+    if (resp_mode == 'button') {
+        instr_choice=['OK'];
+        instr_txt='<i>OK</i>';
+        trial_txt='<i>Indoor</i> or <i>Outdoor</i>';
+        trial_choices=['Indoor','Outdoor'];
+    }
+
+    var instr1_trial = {
+        type: 'html-'+resp_mode+'-response',
+        choices: instr_choice,
+        prompt: '<p>Press ' + instr_txt + ' to begin</p>',
+        margin_horizontal: '40px', margin_vertical: '20px',
+//        button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
+        stimulus: '<p>In this task, you will see objects appear on the screen, one after the other. \
+            Your job is to determine if the object is typically found <i>indoors or outdoors</i>.</p>'
+    }
+    var aud_instr_trial = {
+        type: 'audio-'+resp_mode+'-response',
+        choices: instr_choice,
+        margin_horizontal: '40px', margin_vertical: '20px',
+        stimulus: (resp_mode == 'keyboard' ? 'vid/IndoorOutdoorKeyboard.m4a' : 'vid/IndoorOutdoorButtons.m4a'),
+        //response_ends_trial: false, 
+        prompt: (resp_mode == 'keyboard' ? "<p style='font-size:80%; line-height: 130%;'>In this part, we want you to look at some pictures. \
+            When the computer program starts, it will show you pictures on the screen one by one. For each picture that you see, \
+            I want you to decide whether the item you see is typically an indoor item or an outdoor item. Indicate <i>indoor</i> by \
+            pressing the <b>V</b> key on the keyboard and <i>outdoor</i> by pressing the <b>N</b> key. These are just handy in that \
+            you can use your two index fingers easily. There will be a reminder on the screen to help you remember you what buttons to push. \
+            <p style='font-size:80%; line-height: 130%;'> Now sometimes it's not always going to be clear what you <i>should</i> say. Is an apple an indoor or outdoor item? \
+            Don't over-think this, just go with your initial impression of where you would typically see it.</p><p>Press the <b>spacebar</b> to begin." : 
+            "<p style='font-size:80%; line-height: 130%;'>In this part, we want you to look at some pictures. \
+            When the computer program starts, it will show you pictures on the screen one by one. For each picture that you see, \
+            I want you to decide whether the item you see is typically an indoor item or an outdoor item. Buttons will be on the \
+            screen for each response and just click on the indoor or outdoor button to make your choice. \
+            <p style='font-size:80%; line-height: 130%;'> Now sometimes it's not always going to be clear what you <i>should</i> say. Is an apple an indoor or outdoor item? \
+            Don't over-think this, just go with your initial impression of where you would typically see it.</p><p>Click <b>OK</b> to begin.")
+    }
+    // Build up my actual trial timeline
+    var tlv = [];
+    var ntrials = trial_stim.length;
+ 
+    console.log('Building up the ' + ntrials )
+    for (var i=0; i<ntrials; i++) {
+        // in corr_resp: 0=old, 1=sim, 2=new
+        trial_info=trial_stim[i]
+        // let tr_type='foil';
+        // let cresp='n'
+        // if (trial_info.correct_resp == 0) {
+        //     tr_type = 'target';
+        //     cresp='y';
+        // }
+        // else if (trial_info.correct_resp == 1) {
+        //     tr_type='lure';
+        // }
+        // keycode 'n' (for 1 and 2) = 78, 'y' (for 0)=89, i=73, o=79
+        let obj={stimulus: trial_info.stim, data: {condition: trial_info.cond}}
+        tlv.push(obj)
+    }
+    console.log(JSON.stringify(tlv))
+    var test_trials = {
+        timeline: [
+            {
+            type: 'image-'+resp_mode + '-response',
+            prompt: '<p>Typically seen ' + trial_txt + '?</p>',
+            choices: trial_choices,
+            stimulus_duration: 2000,
+            trial_duration: (selfpaced==1 ? null : 2500),
+            post_trial_gap: 500,
+            response_ends_trial: false,
+            margin_horizontal: '40px', margin_vertical: '20px',
+            stimulus: jsPsych.timelineVariable('stimulus'),
+            data: jsPsych.timelineVariable('data'),
+//            button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
+            stimulus_height: 400,
+            stimulus_width: 400,
+            on_finish: function(data) {
+                // yes = button 0 = 'y' = keycode 89
+                // no = button 1 = 'n' = keycode 78 
+                // indoor = button 0 = 'i' = keycode 73
+                // outdoor = button 1 = 'o' = keycode 79
+                // indoor = button 0 = 'v' = keycode 86
+                // outdoor = button 1 = 'n' = keycode 78
+                let resp = null;
+                if (resp_mode == 'button' && data.button_pressed == 0) { resp = 'i' }
+                else if (resp_mode == 'button' && data.button_pressed == 1) { resp = 'o' }
+                if (resp_mode == 'keyboard' && data.key_press == 73 ) { resp = 'i' }
+                else if (resp_mode == 'keyboard' && data.key_press == 79 ) { resp = 'o' }
+                if (resp_mode == 'keyboard' && data.key_press == 86 ) { resp = 'i' }
+                else if (resp_mode == 'keyboard' && data.key_press == 78 ) { resp = 'o' }
+                //data.correct =  resp == data.correct_response
+                data.correct = true
+                //console.log('Resp: ' + data.button_pressed + '  Cresp: ' + data.correct_response + '  corr: ' + data.correct)
+                //console.log(JSON.stringify(data))
+            }
+            }
+        ],
+        timeline_variables: tlv
+    }
+    var debrief_block = {
+        type: 'html-keyboard-response',
+        trial_duration: 500,
+        prompt: 'Thank you',
+        // stimulus: function () {
+        //     let targets=jsPsych.data.get().filter({condition: 'target'});
+        //     let lures=jsPsych.data.get().filter({condition: 'lure'});
+        //     let foils=jsPsych.data.get().filter({condition: 'foil'});
+        //     let corr_targs = targets.filter({correct: true});
+        //     let corr_lures = lures.filter({correct: true});
+        //     let corr_foils = foils.filter({correct: true});
+        //     let hits=Math.round(corr_targs.count() / targets.count() * 100);
+        //     let cr_lure=Math.round(corr_lures.count() / lures.count() * 100);
+        //     let cr_foil=Math.round(corr_foils.count() / foils.count() * 100);
+        //     let dp_fa_foil=1-(corr_foils.count() / foils.count());
+        //     let dp_fa_lure=1-(corr_lures.count() / lures.count());
+        //     let dp_hits=corr_targs.count() / targets.count();
+        //     if (dp_fa_foil < 0.0001) { dp_fa_foil = 0.5 / foils.count(); }
+        //     else if (dp_fa_foil > 0.9999 ) {dp_fa_foil = (foils.count - 0.5) / foils.count(); }
+        //     if (dp_fa_lure < 0.0001) { dp_fa_lure = 0.5 / lures.count(); }
+        //     else if (dp_fa_lure > 0.9999 ) {dp_fa_lure = (lures.count - 0.5) / lures.count(); }
+        //     if (dp_hits < 0.0001) { dp_hits = 0.5 / targets.count(); }
+        //     else if (dp_hits > 0.9999 ) {dp_hits = (targets.count - 0.5) / targets.count(); }
+        //     let dpTF = invNormcdf(dp_hits) - invNormcdf(dp_fa_foil); 
+        //     let dpTL = invNormcdf(dp_hits) - invNormcdf(dp_fa_lure); 
+        //     //return '<p>Hit rate: ' + hits + '</p><p>CR-L rate: ' + cr_lure + '</p><p>CR-F rate: ' + cr_foil + '</p>'
+        //     return 'HR, ' + hits + ', CR-L, ' + cr_lure + ', CR-F rate, ' + cr_foil + ", d'T:F, " + dpTF.toFixed(3) + ", d'T:L, " + dpTL.toFixed(3) 
+        //}
+    }
+
+    function runNextPhase() {
+       // Start up the next task if asked for
+        if ((typeof jsPsych.data.getURLVariable('q_'+phasename) != 'undefined') && (jsPsych.data.getURLVariable('q_'+phasename) != 'end') ){
+            console.log ('Next up: ' + jsPsych.data.getURLVariable('q_'+phasename))
+            setTimeout(function() { // Shouldn't need this anymore
+            window.location.replace(jsPsych.data.getURLVariable('q_'+phasename) + '.html?'+window.location.search.substring(1));
+            },500);
+        }
+        else {
+        // Nothing left in the exp - show a Complete and take us back home
+        var display_element = jsPsych.getDisplayElement();
+        display_element.innerHTML = '<pre id="jspsych-data-display"></pre>';
+        document.getElementById('jspsych-data-display').textContent = "Experiment complete";
+        // Redirect back to the parameter page
+        redirect_page="end.html";  // Default basic end page
+        if ( (typeof jsPsych.data.getURLVariable('credit_token') != 'undefined') && (typeof jsPsych.data.getURLVariable('experiment_id') != 'undefined') ) {
+            // We're working in SONA-land...
+            redirect_page='https://uci.sona-systems.com/webstudy_credit.aspx?experiment_id='+jsPsych.data.getURLVariable('experiment_id')+'&credit_token='+jsPsych.data.getURLVariable('credit_token')+'&survey_code='+sid;
+        }
+        setTimeout(function() { 
+            window.location.replace (redirect_page);
+            },1000);
+        }      
+    }
+
+    jsPsych.init({
+        timeline: [aud_instr_trial, test_trials, debrief_block],
+        on_finish: function() {
+            if (DEBUGMODE == 1) { jsPsych.data.displayData(); }
+            else {
+                if (device.platform == 'iOS') { // Save both local and web
+                saveData(phasename+sid+"_data_"+dcode, jsPsych.data.get().csv())
+                    .then(function() {
+                    return appendLog(phasename,'End: ' + date.toISOString() + JSON.stringify(jsPsych.data.urlVariables()));
+                    }, errmsg => alert(errmsg))
+                    .then(function() {
+                    return saveLocalData(phasename+sid+"_data_"+dcode, jsPsych.data.get().csv());
+                    }, errmsg => alert(errmsg))
+                    .then(function() {
+                    return appendLocalLog(phasename,'End: ' + date.toISOString() + JSON.stringify(jsPsych.data.urlVariables()));
+                    }, errmsg => alert(errmsg))
+                    .then(runNextPhase());
+                }
+                else {
+                saveData(phasename+sid+"_data_"+dcode, jsPsych.data.get().csv())
+                    .then(function() {
+                    return appendLog(phasename,'End: ' + date.toISOString() + JSON.stringify(jsPsych.data.urlVariables()));
+                    }, errmsg => alert(errmsg))
+                    .then(runNextPhase());
+                }
+            }
+        }
+    });
+}
+</script>
+
+</html>

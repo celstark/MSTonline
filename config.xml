@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="edu.uci.cMST" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>MSTonline</name>
+    <description>
+        Online / mobile version of the Mnemonic Similarity Task.
+    </description>
+    <author email="cestark@uci.edu" href="http://faculty.sites.uci.edu/starklab">
+       Craig Stark
+    </author>
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    <preference name="Orientation" value="landscape" />
+    <icon src="MSTLogo256.png" />
+    <preference name="iosExtraFilesystems" value="library,library-nosync,documents,documents-nosync,cache,bundle,root" />
+    <platform name="android">
+        <allow-intent href="market:*" />
+        <preference name="DisallowOverscroll" value="true" />
+        <plugin name="cordova-plugin-file" spec="~6.0.2" />
+    </platform>
+    <platform name="ios">
+        <allow-intent href="itms:*" />
+        <allow-intent href="itms-apps:*" />
+        <preference name="DisallowOverscroll" value="true" />
+        <plugin name="cordova-plugin-file" spec="~6.0.2" />
+    </platform>
+    <preference name="windows-target-version" value="10.0" />
+    <preference name="windows-target-version" value="10.0" />
+    <plugin name="cordova-plugin-whitelist" spec="1" />
+</widget>

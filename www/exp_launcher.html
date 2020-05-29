@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <!--
+  Task: Helper page to start cMST task
+  Author: Craig Stark
+  Forked from main cMST-Online on 11/20/19 and modified for mobile / Cordova
+
+  Revised: November 20, 2019 (CELS) for Cordova
+    11/22/19: Allow button response to start
+    12/4/19: Shift to use window.location.replace from .href
+      Bigify OK button
+    12/5/19 (CELS): Styled the text/buttons
+    12/18/19 (CELS): Minor bug fix in keyboard response mode
+  -->
+<head>
+  <script type="text/javascript" src="cordova.js"></script>
+  <script type="text/javascript" src="js/index.js"></script>
+  <script src="js/jspsych.js"></script>
+  <script src="js/plugins/jspsych-html-keyboard-response.js"></script>
+  <script src="js/plugins/jspsych-html-button-response.js"></script>
+  <link rel="stylesheet" href="css/jspsych.css"></link>
+  <style>
+    .jspsych-display-element {
+      font-size: 200%;
+    }
+    .jspsych-btn {
+      font-size: 150%;
+    }
+  </style>
+</head>
+
+<body>
+</body>
+<script>
+var DEBUGMODE=0;
+console.log(JSON.stringify(jsPsych.data.urlVariables()));
+
+//if (window.location.protocol == 'file:') {console.log('local debug mode'); DEBUGMODE=1;}
+
+var resp_mode = 'keyboard';
+if (jsPsych.data.getURLVariable('resp') == 'b') {
+  resp_mode = 'button'
+}
+
+instr_txt='any key';
+var instr_choice=jsPsych.ALL_KEYS;
+if (resp_mode == 'button') {
+  instr_txt='<i>OK</i>';
+  instr_choice=['OK'];
+}
+
+var init_welcome = {
+    type:  'html-' + resp_mode + '-response',
+    choices: instr_choice,
+    //button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
+    stimulus: 'Experiment ready - press ' + instr_txt + ' to start' + '<p>'
+}
+
+jsPsych.init({
+    timeline: [init_welcome],
+    on_finish: function() {
+        // Start up the next task if asked for
+        if (typeof jsPsych.data.getURLVariable('q_start') != 'undefined') {
+            console.log ('Next up: ' + jsPsych.data.getURLVariable('q_start'))
+            let newURL = jsPsych.data.getURLVariable('q_start') + '.html?'+window.location.search.substring(1);
+            
+            window.location.replace(newURL);
+        }
+        else {
+              var display_element = jsPsych.getDisplayElement();
+              display_element.innerHTML = '<pre id="jspsych-data-display"></pre>';
+              document.getElementById('jspsych-data-display').textContent = "Experiment complete";
+        }           
+    },
+    exclusions: {
+      min_width: 400,
+      min_height: 400
+//      min_width: 1000,
+//      min_height: 600,
+//      audio: true
+    },
+    default_iti: 250
+});
+</script>
+
+</html>
