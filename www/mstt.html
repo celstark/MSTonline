@@ -10,7 +10,8 @@
 
   Forked from Cordova cMST on 4/2/2020, using that as a basis (actually copied from msts.html which was this)
 
-
+  6/2/2020 (CELS): Fix bug in false-alarm to foil rate
+  
   Optional parameters:
   [sid=##]: Subject ID -- used for data file name (default=1234)
   [resp=X]: Response mode -- set to 'b' to use buttons, anything else to use keys (default=keyboard)
@@ -357,7 +358,7 @@ function onDeviceReady() {
 
                 if (corr_foils.count() == foils.count()) { p_fa_foil = 0.5 / foils.count(); }
                 else if (corr_foils.count() ==0 ) {p_fa_foil = (foils.count() - 0.5) / foils.count(); }
-                else { p_fa_lure=1-(corr_lures.count() / lures.count()); }
+                else { p_fa_foil=1-(corr_foils.count() / foils.count()); }
 
                 console.log(corr_targs.count() + " " + targets.count() + " " + p_hit)
                 console.log(corr_lures.count() + " " + lures.count() + " " + p_fa_lure)
