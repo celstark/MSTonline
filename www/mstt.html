@@ -11,6 +11,7 @@
   Forked from Cordova cMST on 4/2/2020, using that as a basis (actually copied from msts.html which was this)
 
   6/2/2020 (CELS): Fix bug in false-alarm to foil rate
+  6/9/2020 (CELS): Fixed mstset override bug
   
   Optional parameters:
   [sid=##]: Subject ID -- used for data file name (default=1234)
@@ -97,6 +98,9 @@ var stim_set='1';
 //console.log('asdf: '+ jsPsych.data.getURLVariable('stim') + 'sadf')
 if (typeof jsPsych.data.getURLVariable('set') != 'undefined') {
     stim_set=jsPsych.data.getURLVariable('set');
+}
+if (typeof jsPsych.data.getURLVariable('mstset') != 'undefined') {  // over-ride even "set"
+    stim_set=jsPsych.data.getURLVariable('mstset');
 }
 var order='1';
 if (typeof jsPsych.data.getURLVariable('order') != 'undefined') {
