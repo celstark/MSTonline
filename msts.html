@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+ <!--
+  Task: MST - Study phase 
+  Author: Craig Stark
+  Based on the PsychoPy variant for online delivery we've been using for awhile, but that was
+    very clunky.  This loads the same order files that one did though, so we can smoothly move
+    over.  Wrote a little Python script to convert those .csv into the .js files needed here.
+    (ConvertOrdersCSVtoJS.py)
+
+  Forked from Cordova cMST on 4/2/2020, using that as a basis
+  Forked again on 8/20/20, pulled out Cordova, and setup for JATOS
+
+  8/20/20 (CELS): Forked off and reworked for JATOS
+  8/27/20 (CELS): Set response_ends_trial to true -- false was causing a deadlock
+  9/24/20 (CELS): Updated the commenting
+  9/25/20 (CELS): Added ability to have componentJson "force" some of the parameters
+  4/13/21 (CELS): Added nstimper to data log
+  5/14/21 (CELS): Added ability to load images directly from the server rather than the JATOS folder
+                  NOT sure why, but I can't do this for the audio instructions -- all else works
+                  Set to fall back on JATOS worker ID if sid not in studySessionData
+  5/20/21 (CELS): Updated jsPsych version and added "experiment ready" screen prior to video instruction playback
+                  as without this some browsers (iPad) won't auto-play
+  5/26/21 (CELS): Used response_allowed_while_playing: false in vid instructions
+  8/2/21 (CELS):  Shifted to local audio instructions
+                  Added ability to set resp_mode via studyJson
+  11/22/21 (CELS): Updated for jsPsych 6.3.1 (using data.response)
+
+  Optional parameters:
+  In the JATOS versions, these come in via jatos.studySessionData while in Cordova, we pass
+  them in as URL parameters.  Check the code as the actual variable names differ a touch b/n versions. 
+  (these are the JATOS ones)
+
+  [sid=##]: Subject ID -- used for data file name (default=1234)
+  [resp_mode=X]: Response mode -- set to 'button' to use buttons, anything else to use keys (default=keyboard)
+  [set_mst=#]: Stimulus set -- 1-6 (1=default) -- used in loading the order file
+  [trialorder=XX]: Which base order file? (1-4, 1=default)  -- controls ordering of conditions in a run
+  [nstimper=XX]: How many per old/sim/new are we using? 64 or 32 (64=default)
+  [subset=X]: Which subset are we using (if <64 on nstimper) '', a or b (''=default)
+  [selfpaced=X]: Should we allow infinite time with blank screen to make the response? (default =0)
+  [twochoice=#]: Use old/new instead of old/similar/new? (default=0)
+  
+  Note, if there is a studySessionData variable called "order" (and one called "taskindex") it will use this to 
+  queue up the next task.
+
+  More parameters:
+  You can set the component's JSON input to:
+  [force_set=X]: Force a stimulus set (1-6)
+  [force_subset=X]: Force a subset (a vs b)
+  [force_nstimper]: Force a set size (32 vs 64)
+
+  Note - needs order files in 'jsOrder' and needs image files in 'Set #_rs'
+  order files are MST_[nstimper]_s[set]_p1_o[order][a,b]
+
+
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'  https://starklab.bio.uci.edu/  'unsafe-inline' 'unsafe-eval'; 
+  font-src  https://fonts.gstatic.com  ; 
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css; ">
+-->
+
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:  'unsafe-inline' 'unsafe-eval' 
+  https://fonts.gstatic.com http://www.stark-labs.com/exp/jsPsych/mobile_cMST/append_log.php http://www.stark-labs.com/exp/jsPsych/mobile_cMST/write_data_file.php; 
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css; media-src *; 
+img-src 'self' https://starklab.bio.uci.edu data: content:;">
+      
+  <script type="text/javascript" src="jatos.js"></script>
+  <script type="text/javascript" src="js/index.js"></script>
+  <script src="js/jspsych.js"></script>
+  <script src="js/jquery-3.1.1.min.js"></script>
+  <script src="js/plugins/jspsych-html-keyboard-response.js"></script>
+  <script src="js/plugins/jspsych-image-keyboard-response.js"></script>
+  <script src="js/plugins/jspsych-html-button-response.js"></script>
+  <script src="js/plugins/jspsych-image-button-response.js"></script>
+  <script src="js/plugins/jspsych-audio-button-response.js"></script>
+  <script src="js/plugins/jspsych-audio-keyboard-response.js"></script>
+  <script src="js/plugins/jspsych-video-button-response.js"></script>
+  <script src="js/plugins/jspsych-video-keyboard-response.js"></script>
+  <link rel="stylesheet" href="css/jspsych.css"></link>
+  <style>
+    .jspsych-display-element {
+      font-size: 200%;
+    }
+    .jspsych-btn {
+      font-size: 150%;
+    }
+  </style>
+</head>
+<body></body>
+
+<script>
+function waitFor(conditionFunction) {
+  const poll = resolve => {
+  if(conditionFunction()) resolve();
+    else setTimeout(_ => poll(resolve), 400);
+  }
+  return new Promise(poll)
+}
+
+function invNormcdf(p) { // https://stackoverflow.com/questions/8816729/javascript-equivalent-for-inverse-normal-function-eg-excels-normsinv-or-nor
+  var a1 = -39.6968302866538, a2 = 220.946098424521, a3 = -275.928510446969;
+  var a4 = 138.357751867269, a5 = -30.6647980661472, a6 = 2.50662827745924;
+  var b1 = -54.4760987982241, b2 = 161.585836858041, b3 = -155.698979859887;
+  var b4 = 66.8013118877197, b5 = -13.2806815528857, c1 = -7.78489400243029E-03;
+  var c2 = -0.322396458041136, c3 = -2.40075827716184, c4 = -2.54973253934373;
+  var c5 = 4.37466414146497, c6 = 2.93816398269878, d1 = 7.78469570904146E-03;
+  var d2 = 0.32246712907004, d3 = 2.445134137143, d4 = 3.75440866190742;
+  var p_low = 0.02425, p_high = 1 - p_low;
+  var q, r;
+  var retVal;
+
+  if ((p < 0) || (p > 1))
+  {
+    alert("NormSInv: Argument out of range.");
+    retVal = 0;
+  }
+  else if (p < p_low)
+  {
+    q = Math.sqrt(-2 * Math.log(p));
+    retVal = (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+  }
+  else if (p <= p_high)
+  {
+    q = p - 0.5;
+    r = q * q;
+    retVal = (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q / (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1);
+  }
+  else
+  {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    retVal = -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) / ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
+  }
+
+  return retVal;
+}
+
+function leftFillNum(num, width){
+  return num
+  .toString()
+  .padStart(width,0)
+}
+
+
+jatos.onLoad(async function() {
+  baseurl='https://starklab.bio.uci.edu/mst/'; // How we'll get images, videos, etc.  Set to empty string to use local folders
+  var sid=jatos.studySessionData['sid'];
+  if (typeof sid === 'undefined') {
+    if (typeof jatos.workerId !== 'undefined') { // At least try the workerID 
+      sid = jatos.workerId;
+    }
+    else {
+      sid='1234';
+    }
+  }
+  var resp_mode='keyboard';
+  if (jatos.studySessionData['resp_mode'] == 'button') {
+    resp_mode='button';
+    console.log('set to button mode via studySession');
+  }
+  if (typeof jatos.studyJsonInput['resp_mode'] !== 'undefined') { // Let this override
+    resp_mode = jatos.studyJsonInput['resp_mode'];
+    console.log('set to button mode via studyJson');
+  }
+  var stim_set='1';
+  if (typeof jatos.studySessionData['set_mst'] !== 'undefined') {
+    stim_set = jatos.studySessionData['set_mst']
+  }
+  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_set'] !== 'undefined') {
+    stim_set=jatos.componentJsonInput['force_set'];
+    console.log('Stim set forced via JSON component to ' + stim_set);
+  }
+
+  var trialorder='1';
+  if (typeof jatos.studySessionData['trialorder'] !== 'undefined') {
+    trialorder=jatos.studySessionData['trialorder'];
+  }
+  var nstimper='64';
+  if (typeof jatos.studySessionData['nstimper'] !== 'undefined') {
+    nstimper=jatos.studySessionData['nstimper'];
+  }
+  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_nstimper'] !== 'undefined') {
+    nstimper=jatos.componentJsonInput['force_nstimper'];
+    console.log('nstimper forced via JSON component to ' + nstimper);
+  }
+  var subset='';
+  if (typeof jatos.studySessionData['subset'] !== 'undefined') {
+    subset=jatos.studySessionData['subset'];
+  }
+  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_subset'] !== 'undefined') {
+    subset=jatos.componentJsonInput['force_subset'];
+    console.log('Stim subset forced via JSON component to ' + subset);
+  }
+  if (nstimper=='32' && subset=='') {
+    subset='a';
+  }
+  if (nstimper=='64') {
+    subset='';
+  }
+  var selfpaced=0;
+  if (typeof jatos.studySessionData['selfpaced'] !== 'undefined') {
+    selfpaced = jatos.studySessionData['selfpaced']
+  }
+
+  //resp_mode = 'button';
+  // selfpaced = 1;
+
+  var orderfile = 'jsOrders/MST_' + nstimper + '_s'+stim_set+'_p1_o'+trialorder+subset+'.js'
+
+  console.log('loading ' + orderfile)
+  $.getScript(orderfile,function( data, textStatus, jqxhr) {
+    //console.log( data ); // Data returned
+    console.log( textStatus ); // Success
+    console.log( jqxhr.status ); // 200
+    console.debug(orderfile + ' loaded...ish');
+  });
+  console.log('did the load... running await')
+  await waitFor(_ => typeof trial_stim !== 'undefined');
+  console.log('we are set')
+  console.log(trial_stim.length)
+  for (var i=0; i<trial_stim.length; i++) {  // Make our Set X_rs be SetX_rs
+    trial_stim[i].stim=baseurl+trial_stim[i].stim.replace("Set ","Set");
+  }
+
+  // START OF CODE THAT SHOULD BE CONSTANT REGARDLESS OF JATOS / CORDOVA
+  const phasename='msts';
+  jsPsych.data.addProperties({
+    task: phasename,
+    subject: sid,
+    set: stim_set,
+    selfpaced: selfpaced,
+    nstimper: nstimper,
+    orderfile: orderfile
+  });
+
+  // Default is keyboard here - override if buttons
+  var instr_choice=[' ']; // 32 is space
+  var instr_txt='<i>spacebar</i>';
+  var trial_txt='Indoors(<b>v</b>) or Outdoors(<b>n</b>)';
+//    var trial_choices=['i','o'];
+  var trial_choices=['v','n'];
+  if (resp_mode == 'button') {
+    instr_choice=['OK'];
+    instr_txt='<i>OK</i>';
+    trial_txt='<i>Indoors</i> or <i>Outdoors</i>';
+    trial_choices=['Indoors','Outdoors'];
+  }
+
+  var instr1_trial = {
+    type: 'html-'+resp_mode+'-response',
+    choices: instr_choice,
+    prompt: '<p>Press ' + instr_txt + ' to begin this next task</p>',
+    margin_horizontal: '40px', margin_vertical: '20px',
+//        button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
+    stimulus: '<p>Indoor / Outdoor task</p>'
+  }
+  var vid_instr_trial = {
+    type: 'video-'+resp_mode+'-response',
+    choices: instr_choice,
+    //prompt: '<p>Press ' + instr_txt + ' to begin</p>',
+    margin_horizontal: '40px', margin_vertical: '20px',
+    autoplay: true,
+    response_allowed_while_playing: false,
+    //controls: true,
+//        button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
+    stimulus: (resp_mode == 'keyboard' ? ['vid/IndoorOutdoorKeyboard.mp4'] : ['vid/IndoorOutdoorButtons.mp4'])
+  }
+  var aud_instr_trial = {
+    type: 'audio-'+resp_mode+'-response',
+    choices: instr_choice,
+    margin_horizontal: '40px', margin_vertical: '20px',
+    stimulus: (resp_mode == 'keyboard' ? 'vid/IndoorOutdoorKeyboard.m4a' : 'vid/IndoorOutdoorButtons.m4a'),
+    //response_ends_trial: false, 
+    prompt: (resp_mode == 'keyboard' ? "<p style='font-size:80%; line-height: 130%;'>In this part, we want you to look at some pictures. \
+        When the computer program starts, it will show you pictures on the screen one by one. For each picture that you see, \
+        I want you to decide whether the item you see is typically an indoor item or an outdoor item. Indicate <i>indoor</i> by \
+        pressing the <b>V</b> key on the keyboard and <i>outdoor</i> by pressing the <b>N</b> key. These are just handy in that \
+        you can use your two index fingers easily. There will be a reminder on the screen to help you remember you what buttons to push. \
+        <p style='font-size:80%; line-height: 130%;'> Now sometimes it's not always going to be clear what you <i>should</i> say. Is an apple an indoor or outdoor item? \
+        Don't over-think this, just go with your initial impression of where you would typically see it.</p><p>Press the <b>spacebar</b> to begin." : 
+        "<p style='font-size:80%; line-height: 130%;'>In this part, we want you to look at some pictures. \
+        When the computer program starts, it will show you pictures on the screen one by one. For each picture that you see, \
+        I want you to decide whether the item you see is typically an indoor item or an outdoor item. Buttons will be on the \
+        screen for each response and just click on the indoor or outdoor button to make your choice. \
+        <p style='font-size:80%; line-height: 130%;'> Now sometimes it's not always going to be clear what you <i>should</i> say. Is an apple an indoor or outdoor item? \
+        Don't over-think this, just go with your initial impression of where you would typically see it.</p><p>Click <b>OK</b> to begin.")
+  }
+  // Build up my actual trial timeline
+  var tlv = [];
+  var ntrials = trial_stim.length;
+
+  console.log('Building up the ' + ntrials )
+  for (var i=0; i<ntrials; i++) {
+    // in corr_resp: 0=old, 1=sim, 2=new
+    trial_info=trial_stim[i]
+    // let tr_type='foil';
+    // let cresp='n'
+    // if (trial_info.correct_resp == 0) {
+    //     tr_type = 'target';
+    //     cresp='y';
+    // }
+    // else if (trial_info.correct_resp == 1) {
+    //     tr_type='lure';
+    // }
+    // keycode 'n' (for 1 and 2) = 78, 'y' (for 0)=89, i=73, o=79
+    let obj={stimulus: trial_info.stim, data: {condition: trial_info.cond}}
+    tlv.push(obj)
+  }
+  console.log(JSON.stringify(tlv))
+  var test_trials = {
+    timeline: [
+      {
+      type: 'image-'+resp_mode + '-response',
+      prompt: '<p>Typically seen ' + trial_txt + '?</p>',
+      choices: trial_choices,
+      stimulus_duration: 2000,
+      trial_duration: (selfpaced==1 ? null : 2500),
+      post_trial_gap: 500,
+      response_ends_trial: true,
+      margin_horizontal: '40px', margin_vertical: '20px',
+      stimulus: jsPsych.timelineVariable('stimulus'),
+      data: jsPsych.timelineVariable('data'),
+//            button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
+      stimulus_height: 400,
+      stimulus_width: 400,
+      on_finish: function(data) {
+        // yes = button 0 = 'y' = keycode 89
+        // no = button 1 = 'n' = keycode 78 
+        // indoor = button 0 = 'i' = keycode 73
+        // outdoor = button 1 = 'o' = keycode 79
+        // indoor = button 0 = 'v' = keycode 86
+        // outdoor = button 1 = 'n' = keycode 78
+        let resp = null;
+        if (resp_mode == 'button' && data.response == 0) { resp = 'i' }
+        else if (resp_mode == 'button' && data.response == 1) { resp = 'o' }
+        if (resp_mode == 'keyboard' && data.response == 'i' ) { resp = 'i' }
+        else if (resp_mode == 'keyboard' && data.response == 'o' ) { resp = 'o' }
+        if (resp_mode == 'keyboard' && data.response == 'v' ) { resp = 'i' }
+        else if (resp_mode == 'keyboard' && data.response == 'n' ) { resp = 'o' }
+
+        //if (resp_mode == 'button' && data.button_pressed == 0) { resp = 'i' }
+        //else if (resp_mode == 'button' && data.button_pressed == 1) { resp = 'o' }
+        //if (resp_mode == 'keyboard' && data.key_press == 73 ) { resp = 'i' }
+        //else if (resp_mode == 'keyboard' && data.key_press == 79 ) { resp = 'o' }
+        //if (resp_mode == 'keyboard' && data.key_press == 86 ) { resp = 'i' }
+        //else if (resp_mode == 'keyboard' && data.key_press == 78 ) { resp = 'o' }
+
+        //data.correct =  resp == data.correct_response
+        data.correct = true
+        //console.log('Resp: ' + data.button_pressed + '  Cresp: ' + data.correct_response + '  corr: ' + data.correct)
+        //console.log(JSON.stringify(data))
+      }
+    }],
+    timeline_variables: tlv
+  }
+  var debrief_block = {
+    type: 'html-keyboard-response',
+    trial_duration: 500,
+    stimulus: '<p>Thank you</p>',
+    on_finish: function(data) {
+      let date = new Date(); 
+      let dcode = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + (date.getDate()) + 
+        "-" + date.getHours() + "-" + date.getMinutes() + "-" + date.getSeconds();
+      if (!jatos.batchSession.defined("/" + sid)) {  // Should have this by now, but to be safe -- make sure to create this as an array
+        jatos.batchSession.add("/" + sid,[phasename+"_"+dcode+"_Complete"]);
+      }
+      else { // Append to array
+        jatos.batchSession.add("/" + sid + "/-",phasename+"_"+dcode+"_Complete");
+      }
+    }
+
+    // stimulus: function () {
+    //     let targets=jsPsych.data.get().filter({condition: 'target'});
+    //     let lures=jsPsych.data.get().filter({condition: 'lure'});
+    //     let foils=jsPsych.data.get().filter({condition: 'foil'});
+    //     let corr_targs = targets.filter({correct: true});
+    //     let corr_lures = lures.filter({correct: true});
+    //     let corr_foils = foils.filter({correct: true});
+    //     let hits=Math.round(corr_targs.count() / targets.count() * 100);
+    //     let cr_lure=Math.round(corr_lures.count() / lures.count() * 100);
+    //     let cr_foil=Math.round(corr_foils.count() / foils.count() * 100);
+    //     let dp_fa_foil=1-(corr_foils.count() / foils.count());
+    //     let dp_fa_lure=1-(corr_lures.count() / lures.count());
+    //     let dp_hits=corr_targs.count() / targets.count();
+    //     if (dp_fa_foil < 0.0001) { dp_fa_foil = 0.5 / foils.count(); }
+    //     else if (dp_fa_foil > 0.9999 ) {dp_fa_foil = (foils.count - 0.5) / foils.count(); }
+    //     if (dp_fa_lure < 0.0001) { dp_fa_lure = 0.5 / lures.count(); }
+    //     else if (dp_fa_lure > 0.9999 ) {dp_fa_lure = (lures.count - 0.5) / lures.count(); }
+    //     if (dp_hits < 0.0001) { dp_hits = 0.5 / targets.count(); }
+    //     else if (dp_hits > 0.9999 ) {dp_hits = (targets.count - 0.5) / targets.count(); }
+    //     let dpTF = invNormcdf(dp_hits) - invNormcdf(dp_fa_foil); 
+    //     let dpTL = invNormcdf(dp_hits) - invNormcdf(dp_fa_lure); 
+    //     //return '<p>Hit rate: ' + hits + '</p><p>CR-L rate: ' + cr_lure + '</p><p>CR-F rate: ' + cr_foil + '</p>'
+    //     return 'HR, ' + hits + ', CR-L, ' + cr_lure + ', CR-F rate, ' + cr_foil + ", d'T:F, " + dpTF.toFixed(3) + ", d'T:L, " + dpTL.toFixed(3) 
+    //}
+  }
+
+
+  jsPsych.init({
+    timeline: [instr1_trial, aud_instr_trial, test_trials, debrief_block],
+    on_finish: function() {
+      if (0) { jsPsych.data.displayData(); }
+      else {
+        var order=jatos.studySessionData["order"];
+        jatos.studySessionData["taskindex"] += 1;
+        var expdata = jsPsych.data.get().json();
+        // Submit results to JATOS and queue the end or next task
+        if (typeof order === 'undefined' || order.length == jatos.studySessionData["taskindex"]) { 
+          // we're done
+          // Check if this came from SONA - should have URL.sid and .sona
+          if (typeof jatos.urlQueryParameters.sid === 'undefined' || typeof jatos.urlQueryParameters.sona === 'undefined' ||
+              typeof jatos.studyJsonInput['experiment_id'] === 'undefined' || typeof jatos.studyJsonInput['credit_token'] === 'undefined') {
+            jatos.submitResultData(expdata,jatos.endStudy);
+          }
+          else {
+            var redirect='https://uci.sona-systems.com/webstudy_credit.aspx?experiment_id='+jatos.studyJsonInput['experiment_id']+
+              '&credit_token='+jatos.studyJsonInput['credit_token']+'&survey_code='+jatos.urlQueryParameters.sid;
+            jatos.endStudyAndRedirect(redirect,expdata);
+          }
+        }
+        else {
+          // submit and start the next
+          jatos.submitResultData(expdata, () => { jatos.startComponentByPos(order[jatos.studySessionData["taskindex"]]) });
+        }
+      }
+    }
+  });
+});
+</script>
+
+</html>

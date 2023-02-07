@@ -1,0 +1,180 @@
+<!doctype html>
+<html>
+<!--
+  Setup the tasks to be used in the MST
+
+  Designed for collaborations.  
+
+  Note, we can setup a range of parameters in the study-level JSON file to act as semi-defaults.
+  We can also have these over-ridden in the batch-level JSON properties. Given multiple labs using
+  this, we'll typically have the configurations change at the batch level.  These are the Properties
+  pages in JATOS, not the Batch Data and should look like this:
+  {
+  "nstimper": 32,
+  "include_demographics": 1
+  }
+
+  resp_mode: set to 'button' to use buttons, anything else to use keys
+  mst_set: Stimulus set -- 1-6 (1=default) -- used in loading the order file
+  selfpaced: Should we allow infinite time with blank screen to make the response? (default =0)
+  twochoice: Use old/new instead of old/similar/new? (default=0)
+  nstimper: How many per old/sim/new are we using? 64 or 32 (64=default)
+  include_demographics: 1/0 -- Include the collection of demographic data
+  include_consent: 1/0 -- Include Stark lab consent form
+  include_idcode: 1/0- -- Include splash screen for ID code entry
+
+-->
+<head>
+  <script src="js/jquery-3.1.1.min.js"></script>
+  <script src="jatos.js"></script>
+  
+  <link rel="stylesheet" href="css/pure-release-0.6.0/pure-min.css">
+  <link rel="stylesheet" href="css/jspsych.css"></link>
+  <style>
+    .jspsych-display-element {
+      font-size: 200%;
+    }
+    .jspsych-btn {
+      font-size: 125%;
+    }
+  </style>
+</head>
+
+<body>
+  <p style="text-align: center; font-size: 200%; vertical-align: middle;">
+    MST Memory Test
+    <br>
+    <br>
+    Getting experiment ready...<br><br>
+	<button id="continueButton"  class="jspsych-btn" style="justify-content: center" disabled>Continue</button>
+</body>
+
+<script type="text/javascript">
+
+jatos.onLoad(function () {
+
+  var sid=0;
+  var urlsid=0;
+  if (typeof jatos.urlQueryParameters.sid !== 'undefined') {
+    urlsid = jatos.urlQueryParameters.sid;
+  }
+  if (typeof jatos.workerId !== 'undefined') { // The worker ID should always be here and be stable -- use it to define our counter-balance
+    sid = jatos.workerId;
+  }
+  if (typeof jatos.urlQueryParameters.forcesid !== 'undefined') {
+    sid = jatos.urlQueryParameters.forcesid;
+  }
+
+  var order=[5,6,7]; // Default order skips consent and demographics
+  var include_consent=0;
+  var include_demographics=0;
+  var include_idcode=0;
+
+  jatos.studySessionData['sid']=sid;
+  jatos.studySessionData['urlsid']=urlsid;
+  
+  jatos.studySessionData["taskindex"] = 0;
+  jatos.studySessionData["order"] = order;
+
+  jatos.studySessionData["set_mst"] = 1;
+  jatos.studySessionData["nstimper"] = 64; // do the full set
+  jatos.studySessionData['resp_mode'] = 'button'; 
+  jatos.studySessionData['twochoice'] = 0;
+  jatos.studySessionData['selfpaced'] = 1; // This should be our default as it was used in the original
+
+  // Now, take any possible things we'd see in the JSON input at the study-level and convert them to studySessionData so
+  // that the individual tasks have a consistent spot to find them.
+  if (typeof jatos.studyJsonInput['resp_mode'] !== 'undefined') {
+    jatos.studySessionData['resp_mode']=jatos.studyJsonInput['resp_mode'];
+  }
+  if (typeof jatos.studyJsonInput['set_mst'] !== 'undefined') {
+    jatos.studySessionData['set_mst']=jatos.studyJsonInput['set_mst'];
+  }
+  if (typeof jatos.studyJsonInput['selfpaced'] !== 'undefined') {
+    jatos.studySessionData['selfpaced']=jatos.studyJsonInput['selfpaced'];
+  }
+  if (typeof jatos.studyJsonInput['twochoice'] !== 'undefined') {
+    jatos.studySessionData['twochoice']=jatos.studyJsonInput['twochoice'];
+  }
+  if (typeof jatos.studyJsonInput['nstimper'] !== 'undefined') {
+    jatos.studySessionData['nstimper']=jatos.studyJsonInput['nstimper'];
+  }
+  if (typeof jatos.studyJsonInput['include_demographics'] !== 'undefined') {
+    include_demographics=jatos.studyJsonInput['include_demographics'];
+  }
+  if (typeof jatos.studyJsonInput['include_consent'] !== 'undefined') {
+    include_consent=jatos.studyJsonInput['include_consent'];
+  }
+  if (typeof jatos.studyJsonInput['include_idcode'] !== 'undefined') {
+    include_idcode=jatos.studyJsonInput['include_idcode'];
+  }
+  console.log(jatos.batchJsonInput);
+  console.log(jatos.batchProperties.title);
+  // Now, let any batch-level bits override those
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['resp_mode'] !== 'undefined' ) { 
+    jatos.studySessionData['resp_mode']=jatos.batchJsonInput['resp_mode'];
+  }
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['set_mst'] !== 'undefined' ) { 
+    jatos.studySessionData['set_mst']=jatos.batchJsonInput['set_mst'];
+  }
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['selfpaced'] !== 'undefined' ) { 
+    jatos.studySessionData['selfpaced']=jatos.batchJsonInput['selfpaced'];
+  }
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['twochoice'] !== 'undefined' ) { 
+    jatos.studySessionData['twochoice']=jatos.batchJsonInput['twochoice'];
+  }
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['nstimper'] !== 'undefined' ) { 
+    jatos.studySessionData['nstimper']=jatos.batchJsonInput['nstimper'];
+  }
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['include_demographics'] !== 'undefined' ) { 
+    console.log(jatos.batchJsonInput['include_demographics'])
+    include_demographics=jatos.batchJsonInput['include_demographics'];
+  }
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['include_consent'] !== 'undefined' ) { 
+    include_consent=jatos.batchJsonInput['include_consent'];
+  }
+  if (jatos.batchJsonInput &&  jatos.batchJsonInput['include_idcode'] !== 'undefined' ) { 
+    include_idcode=jatos.batchJsonInput['include_idcode'];
+  }
+  if (typeof jatos.urlQueryParameters.set_mst !== 'undefined') {
+    jatos.studySessionData['set_mst'] = jatos.urlQueryParameters.set_mst;
+  }
+  
+  if (include_demographics) { order.unshift(4); }
+  if (include_consent) {order.unshift(3); }
+  if (include_idcode) {order.unshift(2); }
+  console.log('Worker ID/sid=' + sid + '  URLSID='+urlsid+'  mst set='+jatos.studySessionData["set_mst"] + ' nstimper='+jatos.studySessionData['nstimper']);
+  console.log('order: ' + order);
+  console.log('set: ' + jatos.urlQueryParameters.set_mst);
+  console.log('full: ' + jatos.urlQueryParameters)
+  console.log("includes: " + include_demographics + include_consent + include_idcode)
+  var d= new Date();
+
+  jatos.appendResultData({
+    task: "setup-MST",
+    subject: sid,
+    urlsid: urlsid,
+    selfpaced: jatos.studySessionData['selfpaced'],
+    twochoice: jatos.studySessionData['twochoice'],
+    nstimper: jatos.studySessionData['nstimper'],
+    respmode: jatos.studySessionData['resp_mode'],
+    MSTSet: jatos.studySessionData["set_mst"],
+    date: d.toString()
+  });
+  $('#continueButton').prop('disabled', false);
+  
+});
+
+$('#continueButton').click(function () {
+  // We're set to run - so ...
+  var sid=jatos.studySessionData['sid'];
+  
+  var order=jatos.studySessionData['order'];
+  console.log('Starting with ' + order[0]);
+  jatos.startComponentByPos(order[0],jatos.studySessionData);
+});
+
+
+</script>
+
+</html>
