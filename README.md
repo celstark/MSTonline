@@ -15,7 +15,7 @@ You will need to install [JATOS](https://www.jatos.org/). This sets up a webserv
 I do not host things for you.  Well, actually, I do have one setup for collaborators, so let me know. But, it's pretty simple to setup. Head on over to the JATOS documentation to see how to do it. This can just be some machine in your lab if you're testing relatively locally or it can even be the same machine that's delivering the experiment. 
 
 # Installing
-You can clone the repository and setup a new JATOS experiment and then copy these resources into your JATOS `study_assets_root` folder. But, a better option will be to go to a Release here and download the JATOS `.zip` file.  Once you have JATOS import that, you have the experiment fully in place.
+You can clone the repository and setup a new JATOS experiment and then copy these resources into your JATOS `study_assets_root` folder. But, a better option will be to go to a Release here and download the JATOS `mstonline.zip` file.  Once you have JATOS import that, you have the experiment fully in place.
 
 # Data
 JATOS will provide a very thorough log file in a JSON like format. If all you want, however, is the REC, LDI and a few other summary metrics, you can find these in the *Worker and Batch Manager* and then *Batch Session Data*.  There, you'll see things like:
