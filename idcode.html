@@ -5,6 +5,8 @@
 
   Collects an ID code
 
+  2/8/23 (CELS): Converted to jsPsych7
+
 -->
 <head>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:  'unsafe-inline' 'unsafe-eval' 
@@ -33,7 +35,6 @@
 
 jatos.onLoad(function() {
   var jsPsych = initJsPsych({
-    
     on_finish: function() {
       if (0) { jsPsych.data.displayData(); }
       else {
