@@ -31,8 +31,13 @@
   8/2/2021 (CELS): Switched to local use of videos, and set to start at 0.1s in to autoplay correctly
                    Added ability to set resp_mode via studyJson
   8/3/2021 (CELS) 0.1s start was causing issues on iPad so set to only do this for Edge
-  11/22/21 (CELS): Updated for jsPsych 6.3.1 (using data.response)
-              
+  3/14/22 (CELS): Used version number for jsPsych library location
+                  Added option to skip instructions ('instruct' in StudyData or 'force_instruct' in Json)
+  3/18/22 (CELS): Fixed old jspsych button/keyboard response code
+  5/31/22 (CELS): Added bit about blank screen to instructions
+  7/12/22 (CELS): Added logging of lure bin
+  2/8/23 (CELS): Updated for jsPsych7
+
   Optional parameters:
   In the JATOS versions, these come in via jatos.studySessionData while in Cordova, we pass
   them in as URL parameters.  Check the code as the actual variable names differ a touch b/n versions. 
@@ -47,6 +52,7 @@
   [subset=X]: Which subset are we using (if <64 on nstimper) '', a or b (''=default)
   [selfpaced=X]: Should we allow infinite time with blank screen to make the response? (default =0)
   [twochoice=#]: Use old/new instead of old/similar/new? (default=0)
+  [instruct=X]: Show instructions (default=1)
 
   Note, if there is a studySessionData variable called "order" (and one called "taskindex") it will use this to 
   queue up the next task.
@@ -57,6 +63,7 @@
   [force_subset=X]: Force a subset (a vs b)
   [force_nstimper]: Force a set size (32 vs 64)
   [force_twochoice=X]: Force the OSN (0) vs. ON (1) response
+  [force_instruct]: Force instruction mode on or off
 
   Note - needs order files in 'jsOrder' and needs image files in 'Set #_rs'
   order files are MST_[nstimper]_s[set]_p2_o[order][a,b]
@@ -75,15 +82,15 @@ img-src 'self' https://starklab.bio.uci.edu data: content:;">
       
   <script type="text/javascript" src="jatos.js"></script>
   <script type="text/javascript" src="js/index.js"></script>
-  <script src="js/jspsych.js"></script>
+  <script src="js/jspsych_731/dist/jspsych.js"></script>
   <script src="js/jquery-3.1.1.min.js"></script>
-  <script src="js/plugins/jspsych-html-keyboard-response.js"></script>
-  <script src="js/plugins/jspsych-image-keyboard-response.js"></script>
-  <script src="js/plugins/jspsych-html-button-response.js"></script>
-  <script src="js/plugins/jspsych-image-button-response.js"></script>
-  <script src="js/plugins/jspsych-video-button-response.js"></script>
-  <script src="js/plugins/jspsych-video-keyboard-response.js"></script>
-  <link rel="stylesheet" href="css/jspsych.css"></link>
+  <script src="js/jspsych_731/dist/plugin-html-keyboard-response.js"></script>
+  <script src="js/jspsych_731/dist/plugin-image-keyboard-response.js"></script>
+  <script src="js/jspsych_731/dist/plugin-html-button-response.js"></script>
+  <script src="js/jspsych_731/dist/plugin-image-button-response.js"></script>
+  <script src="js/jspsych_731/dist/plugin-video-button-response.js"></script>
+  <script src="js/jspsych_731/dist/plugin-video-keyboard-response.js"></script>
+  <link rel="stylesheet" href="js/jspsych_731/dist/jspsych.css"></link>
   <style>
     .jspsych-display-element {
       font-size: 200%;
@@ -148,8 +155,9 @@ function leftFillNum(num, width){
 }
 
 jatos.onLoad(async function() {
-  //baseurl='https://starklab.bio.uci.edu/mst/'; // How we'll get images, videos, etc.  Set to empty string to use local folders
-  baseurl=''; 
+  baseurl='https://starklab.bio.uci.edu/mst/'; // How we'll get images, videos, etc.  Set to empty string to use local folders
+  baseurl=''
+  var debug=0;
   var sid=jatos.studySessionData['sid'];
   if (typeof sid === 'undefined') {
     if (typeof jatos.workerId !== 'undefined') { // At least try the workerID 
@@ -213,7 +221,14 @@ jatos.onLoad(async function() {
     twochoice=jatos.componentJsonInput['force_twochoice'];
     console.log('Two-choice mode forced via JSON component to ' + twochoice);
   }
-
+  var instruct=1;
+  if (typeof jatos.studySessionData['instruct'] !== 'undefined') {
+    instruct = jatos.studySessionData['instruct']
+  }
+  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_instruct'] !== 'undefined') {
+    instruct=jatos.componentJsonInput['force_instruct'];
+    console.log('Instructions forced via JSON component to ' + instruct);
+  }
   var orderfile = 'jsOrders/MST_' + nstimper + '_s'+stim_set+'_p2_o'+trialorder+subset+'.js'
 
 
@@ -234,6 +249,34 @@ jatos.onLoad(async function() {
 
   // START OF CODE THAT SHOULD BE CONSTANT REGARDLESS OF JATOS / CORDOVA
   const phasename='mstt';
+  var jsPsych = initJsPsych({on_finish: function() {
+      if (0) { jsPsych.data.displayData(); }
+      else {
+        var order=jatos.studySessionData["order"];
+        jatos.studySessionData["taskindex"] += 1;
+        var expdata = jsPsych.data.get().json();
+        // Submit results to JATOS and queue the end or next task
+        if (typeof order === 'undefined' || order.length == jatos.studySessionData["taskindex"]) { 
+            // we're done
+          // Check if this came from SONA - should have URL.sid and .sona
+          if (typeof jatos.urlQueryParameters.sid === 'undefined' || typeof jatos.urlQueryParameters.sona === 'undefined' ||
+              typeof jatos.studyJsonInput['experiment_id'] === 'undefined' || typeof jatos.studyJsonInput['credit_token'] === 'undefined') {
+            jatos.submitResultData(expdata,jatos.endStudy);
+          }
+          else {
+            var redirect='https://uci.sona-systems.com/webstudy_credit.aspx?experiment_id='+jatos.studyJsonInput['experiment_id']+
+              '&credit_token='+jatos.studyJsonInput['credit_token']+'&survey_code='+jatos.urlQueryParameters.sid;
+            jatos.endStudyAndRedirect(redirect,expdata);
+          }
+        }
+        else {
+            // submit and start the next
+            jatos.submitResultData(expdata, () => { jatos.startComponentByPos(order[jatos.studySessionData["taskindex"]]) });
+        }
+      }
+    }
+  });
+
   jsPsych.data.addProperties({
     task: phasename,
     subject: sid,
@@ -265,21 +308,22 @@ jatos.onLoad(async function() {
     }
   }
   var instr1_trial = {
-    type: 'html-'+resp_mode+'-response',
+    type: (resp_mode == 'button' ? jsPsychHtmlButtonResponse : jsPsychHtmlKeyboardResponse),
     choices: instr_choice,
     prompt: '<p>Press ' + instr_txt + ' to begin this next task</p>',
     margin_horizontal: '40px', margin_vertical: '20px',
 //        button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
-    stimulus: '<p>Old / Similar / New task</p>'
+    stimulus: '<p>' + trial_txt + ' task</p>'
   }
   var vid_instr_trial = {
-    type: 'video-'+resp_mode+'-response',
+    type: (resp_mode == 'button' ? jsPsychVideoButtonResponse : jsPsychVideoKeyboardResponse),
     choices: instr_choice,
     //prompt: '<p>Press ' + instr_txt + ' to begin</p>',
     margin_horizontal: '40px', margin_vertical: '20px',
     autoplay: true,
     response_allowed_while_playing: false,
     controls: true,
+    prompt: "<i>If the picture disappears before you respond, don't worry. Just make your response even if the screen is blank.</i>",
     //start: 0.1,
     //controls: true,
 //        button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
@@ -299,13 +343,15 @@ jatos.onLoad(async function() {
   // Build up my actual trial timeline
   var tlv = [];
   var ntrials = trial_stim.length;
+  if (debug) { ntrials=5; }
 
   console.log('Building up the ' + ntrials  )
   for (var i=0; i<ntrials; i++) {
     // in corr_resp: 0=old, 1=sim, 2=new
     trial_info=trial_stim[i]
     let tr_type='foil';
-    let cresp='n'
+    let cresp='n';
+    //let lbin=0;
     if (trial_info.cond == 'TR') {
       tr_type = 'target';
       cresp='o';
@@ -319,15 +365,16 @@ jatos.onLoad(async function() {
         cresp='s';
       }
     }
+    //console.log('lure bin: '+trial_info.lbin)
     // keycode 'n' (for 1 and 2) = 78, 'y' (for 0)=89, i=73, o=79
-    let obj={stimulus: trial_info.stim, data: {condition: trial_info.cond, correct_response: cresp}}
+    let obj={stimulus: trial_info.stim, data: {condition: trial_info.cond, correct_response: cresp, lbin: trial_info.lbin}}
     tlv.push(obj)
   }
   console.log(JSON.stringify(tlv))
   var test_trials = {
     timeline: [
       {
-      type: 'image-'+resp_mode + '-response',
+      type: (resp_mode == 'button' ? jsPsychImageButtonResponse : jsPsychImageKeyboardResponse),
       prompt: '<p>Is this ' + trial_txt + '?</p>',
       choices: trial_choices,
       stimulus_duration: 2000,
@@ -357,32 +404,26 @@ jatos.onLoad(async function() {
         // 
         let resp = null;
         if (resp_mode == 'button') {
-            //if (data.button_pressed == 0) { resp = 'o' }
-            //else if (data.button_pressed == 2 ) { resp = 'n' }
-            //else if (data.button_pressed == 1 ) { resp = (twochoice==1 ? 'n' : 's') }
             if (data.response == 0) { resp = 'o' }
             else if (data.response == 2 ) { resp = 'n' }
             else if (data.response == 1 ) { resp = (twochoice==1 ? 'n' : 's') }
         } 
         else {
-            //if (data.key_press == 86) { resp = 'o' }
-            //else if (data.key_press == 66 ) { resp = 's' }
-            //else if (data.key_press == 78) { resp = 'n' }
-            if (data.response=='v') { resp = 'o' }
-            else if (data.response=='b' ) { resp = 's' }
-            else if (data.response=='n') { resp = 'n' }
+            if (data.response == 'v') { resp = 'o' }
+            else if (data.response == 'b' ) { resp = 's' }
+            else if (data.response == 'n') { resp = 'n' }
         } 
         data.correct =  resp == data.correct_response;
 
         data.resp = resp;
-        // console.log('Resp: ' + data.button_pressed + ' ' + data.resp + '  Cresp: ' + data.correct_response + '  corr: ' + data.correct)
-        console.log(JSON.stringify(data))
+        //console.log('Resp: ' + data.response + ' ' + data.resp + '  Cresp: ' + data.correct_response + '  corr: ' + data.correct)
+        //console.log(JSON.stringify(data))
       }
     }],
     timeline_variables: tlv
   }
   var debrief_block = {
-    type: 'html-keyboard-response',
+    type: jsPsychHtmlKeyboardResponse,
     trial_duration: 500,
     stimulus: '<p>Thank you</p>',
     on_finish: function(data) {
@@ -473,35 +514,10 @@ jatos.onLoad(async function() {
     }
   }
 
-  jsPsych.init({
-    timeline: [instr1_trial, vid_instr_trial, test_trials, debrief_block],
-    on_finish: function() {
-      if (0) { jsPsych.data.displayData(); }
-      else {
-        var order=jatos.studySessionData["order"];
-        jatos.studySessionData["taskindex"] += 1;
-        var expdata = jsPsych.data.get().json();
-        // Submit results to JATOS and queue the end or next task
-        if (typeof order === 'undefined' || order.length == jatos.studySessionData["taskindex"]) { 
-            // we're done
-          // Check if this came from SONA - should have URL.sid and .sona
-          if (typeof jatos.urlQueryParameters.sid === 'undefined' || typeof jatos.urlQueryParameters.sona === 'undefined' ||
-              typeof jatos.studyJsonInput['experiment_id'] === 'undefined' || typeof jatos.studyJsonInput['credit_token'] === 'undefined') {
-            jatos.submitResultData(expdata,jatos.endStudy);
-          }
-          else {
-            var redirect='https://uci.sona-systems.com/webstudy_credit.aspx?experiment_id='+jatos.studyJsonInput['experiment_id']+
-              '&credit_token='+jatos.studyJsonInput['credit_token']+'&survey_code='+jatos.urlQueryParameters.sid;
-            jatos.endStudyAndRedirect(redirect,expdata);
-          }
-        }
-        else {
-            // submit and start the next
-            jatos.submitResultData(expdata, () => { jatos.startComponentByPos(order[jatos.studySessionData["taskindex"]]) });
-        }
-      }
-    }
-  });
+ 
+  var timeline = (instruct==1 ? [instr1_trial, vid_instr_trial, test_trials, debrief_block] : [instr1_trial, test_trials, debrief_block] );
+  jsPsych.run(timeline);
+    
 });
 </script>
 
