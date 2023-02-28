@@ -90,6 +90,7 @@
   <script src="js/jspsych_731/dist/plugin-image-button-response.js"></script>
   <script src="js/jspsych_731/dist/plugin-video-button-response.js"></script>
   <script src="js/jspsych_731/dist/plugin-video-keyboard-response.js"></script>
+  <script src="js/jspsych_731/dist/plugin-preload.js"></script>
   <link rel="stylesheet" href="js/jspsych_731/dist/jspsych.css"></link>
   <style>
     .jspsych-display-element {
@@ -213,8 +214,10 @@ jatos.onLoad(async function() {
   await waitFor(_ => typeof trial_stim !== 'undefined');
   console.log('we are set')
   console.log(trial_stim.length)
+  const preload_fnames = new Array(trial_stim.length)
   for (var i=0; i<trial_stim.length; i++) {  // Make our Set X_rs be SetX_rs
     trial_stim[i].image=trial_stim[i].image.replace("Set ","Set");
+    preload_fnames[i]=trial_stim[i].image;
   }
   
   //console.log(typeof trial_stim);
@@ -478,9 +481,22 @@ jatos.onLoad(async function() {
   }
 
   // END OF CONSTANT CODE
-
+  var preload = {
+    type: jsPsychPreload,
+    images: preload_fnames, // since we use a timeline variable, we can't use the simple "trials"
+    show_progress_bar: true,
+    show_detailed_erros: true,
+    continue_after_error: true,
+    on_error: function(fname) {
+      console.log('FAILED  '+fname)
+    },
+    on_finish: function(data) {
+      console.log('Preload success? ' + data.success)
+      console.log('Failed on ' + data.failed_images.length)
+    }
+  }
   
-  var timeline = [instr1_trial, vid_instr_trial, test_trials, debrief_block];
+  var timeline = [preload, instr1_trial, vid_instr_trial, test_trials, debrief_block];
   jsPsych.run(timeline);
 
 });
