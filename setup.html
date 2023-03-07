@@ -136,10 +136,6 @@ jatos.onLoad(function () {
     jatos.studySessionData['nstimper']=jatos.batchJsonInput['nstimper'];
   }
   if (jatos.batchJsonInput) { console.log('jatos.batchJsonInput: ', jatos.batchJsonInput)}
-  if (typeof jatos.batchJsonInput['include_demographics'] !== 'undefined') { 
-    console.log('jatos.bsJI demog neq undef: '+ jatos.batchJsonInput['include_demographics'])
-  }
-  else { console.log('jatos.bsJI demog eq undef: '+ jatos.batchJsonInput['include_demographics'])}
   if (jatos.batchJsonInput && typeof jatos.batchJsonInput['include_demographics'] !== 'undefined' ) { 
     include_demographics=jatos.batchJsonInput['include_demographics'];
     console.log('include_demographics batch' + include_demographics);
