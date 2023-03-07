@@ -1,44 +1,51 @@
 <!DOCTYPE html>
 <html>
  <!--
-  Task: MST - Test phase 
+  Task: cMST (clinical-optimized MST) Continuous version
   Author: Craig Stark
-  Based on the PsychoPy variant for online delivery we've been using for awhile, but that was
-    very clunky.  This loads the same order files that one did though, so we can smoothly move
-    over.  Wrote a little Python script to convert those .csv into the .js files needed here.
-    (ConvertOrdersCSVtoJS.py)
-
-  Forked from Cordova cMST on 4/2/2020, using that as a basis (actually copied from msts.html which was this)
+  Forked from main cMST_cs_v1 on 5/7/20 and modified for the more traditional continuous MST
   Forked again on 8/20/20, pulled out Cordova, and setup for JATOS
-
-  6/2/2020 (CELS): Fix bug in false-alarm to foil rate
-  6/9/2020 (CELS): Fixed mstset override bug
-  8/20/20 (CELS): Forked off and reworked for JATOS
-  9/11/20 (CELS): Fixed bug where it was loading the study phase's order file
-  9/24/20 (CELS): Updated the commenting
-  9/25/20 (CELS): Added ability to have componentJson "force" some of the parameters
-  9/29/20 (CELS): Will post results summary to JATOS batch data
-  10/2/2020 (CELS): Put summary text back into main log as well
-  11/13/20 (CELS): Fixed the datecode used in the batch session data -- was off by 1 day
-  11/30/20 (CELS): Added force_twochoice=X
-  12/6/20 (CELS): Added twochoice to data log
-  4/13/21 (CELS): Added nstimper to data log
-  5/14/21 (CELS): Added ability to load images directly from the server rather than the JATOS folder
-                  Set to fall back on JATOS worker ID if sid not in studySessionData
-  5/20/21 (CELS): Updated jsPsych version and added "experiment ready" screen prior to video instruction playback
-                  as without this some browsers (iPad) won't auto-play
-  5/26/21 (CELS): Used response_allowed_while_playing: false in vid instructions
-  8/2/2021 (CELS): Switched to local use of videos, and set to start at 0.1s in to autoplay correctly
-                   Added ability to set resp_mode via studyJson
-  8/3/2021 (CELS) 0.1s start was causing issues on iPad so set to only do this for Edge
-  3/14/22 (CELS): Used version number for jsPsych library location
-                  Added option to skip instructions ('instruct' in StudyData or 'force_instruct' in Json)
-  3/18/22 (CELS): Fixed old jspsych button/keyboard response code
-  5/31/22 (CELS): Added bit about blank screen to instructions
-  7/12/22 (CELS): Added logging of lure bin
-  2/8/23 (CELS): Updated for jsPsych7
-  2/28/23 (CELS): Added preloading images
   
+  Currently, this is set to do a 256-trial continuous design with 32 lures & repeat pairs at 
+    "short" lags of 4-12 and 32 lure and repeat pairs at "medium" lags of 20-100
+
+  Revised: November 20, 2019 (CELS) for Cordova
+   12/2/19 (CELS): using image height/width (new addition to plugin) and if end, returns to param screen
+   12/4/19 (CELS): Using .replace not .href and will take you back to index.html if the end
+   12/5/19 (CELS): Styles to alter text/button sizes, ensuring deviceready, meta-tag
+   12/6/19 (CELS): Fixed bug where stim-set wasn't being honored
+   12/6/19 (CELS): Shifted data saving to savedata.js and setup to allow local backup save on iOS
+   12/18/19 (CELS): Added d' outputs
+   4/13/20 (CELS): Added cmstset parameter
+   4/13/20 (CELS): Goes to end.html if this is the last phase
+   4/16/20 (CELS): Will detect if on SONA and go back there for credit
+   5/7/2020 (CELS): Fixed issue in d' calculations
+   5/13/2020 (CELS): Better fix for d' calculations
+   6/2/2020 (CELS): Fix bug in false-alarm to foil rate
+   8/20/20 (CELS): Forked off and reworked for JATOS
+   9/24/20 (CELS): Updated the commenting
+   9/25/20 (CELS): Added ability to have componentJson "force" some of the parameters
+   10/1/20 (CELS): No longer show data summary at end.  Log this to the main data field for easy extraction
+                   Will post results summary to JATOS batch data
+   12/1/20 (CELS): Added twochoice flag (default=1) and, if 0, will do traditional old/similar/new
+   1/3/22 (CELS): Added ability to force the order file prefix (force_orderprefix)
+
+   3/14/22 (CELS): Reworked a bit for being our continuous version of the cMST_v2.  
+                  Set defaults to 3-choice and will used the imbalanced orders. 
+                  Removed the video instructions
+                  Renamed to cont_cmst
+                  Phasename set to cMSTCont
+                  Set to use version-based jspsych folder
+   3/18/22 (CELS): Fixed old jspsych button/keyboard response code
+   5/3/22 (CELS): Added self-paced mode
+   5/31/22 (CELS): Added initial "instr1_trial" to fix iPad issue
+   7/12/22 (CELS): Fixed space-bar start bug
+                  Added logging of lbin if it exists in the order file
+   2/13/23(CELS): Converted to jspsych7
+                  Set to use default 256-item order
+                  Reset phasename/name (as this isn't the "cmst")
+   2/28/23 (CELS): Added preloading images
+
   Optional parameters:
   In the JATOS versions, these come in via jatos.studySessionData while in Cordova, we pass
   them in as URL parameters.  Check the code as the actual variable names differ a touch b/n versions. 
@@ -47,13 +54,12 @@
   Optional parameters:
   [sid=##]: Subject ID -- used for data file name (default=1234)
   [resp_mode=X]: Response mode -- set to 'b' to use buttons, anything else to use keys (default=keyboard)
-  [set_mst=#]: Stimulus set -- 1-6 (1=default) -- used in loading the order file
+  [set=#]: Stimulus set -- 1-6 (1=default) -- used in loading the order file
+  [set_contmst=#]: Same as above, but even over-rides the above.  Useful if using the cMST and MST in the same experiment
   [trialorder=XX]: Which base order file? (1-4, 1=default)  -- controls ordering of conditions in a run
-  [nstimper=XX]: How many per old/sim/new are we using? 64 or 32 (64=default)
-  [subset=X]: Which subset are we using (if <64 on nstimper) '', a or b (''=default)
+  [run=XX]: Which particular run? (1-1, 1=default) -- controls which actual stimuli in that set are plugged into the order
+  [twochoice=X]: 0=OSN, 1=ON response choices (1=default)
   [selfpaced=X]: Should we allow infinite time with blank screen to make the response? (default =0)
-  [twochoice=#]: Use old/new instead of old/similar/new? (default=0)
-  [instruct=X]: Show instructions (default=1)
 
   Note, if there is a studySessionData variable called "order" (and one called "taskindex") it will use this to 
   queue up the next task.
@@ -61,25 +67,19 @@
   More parameters:
   You can set the component's JSON input to:
   [force_set=X]: Force a stimulus set (1-6)
-  [force_subset=X]: Force a subset (a vs b)
-  [force_nstimper]: Force a set size (32 vs 64)
-  [force_twochoice=X]: Force the OSN (0) vs. ON (1) response
-  [force_instruct]: Force instruction mode on or off
+  [force_twochoice=X]
 
   Note - needs order files in 'jsOrder' and needs image files in 'Set #_rs'
-  order files are MST_[nstimper]_s[set]_p2_o[order][a,b]
+  order files are ContMST_256_[set]_[order]_[run].js
 
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'  https://starklab.bio.uci.edu/  'unsafe-inline' 'unsafe-eval'; 
-      font-src  https://fonts.gstatic.com  ; 
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css; ">
-  
+
 -->
 
 <head>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:  'unsafe-inline' 'unsafe-eval' 
-  https://fonts.gstatic.com http://www.stark-labs.com/exp/jsPsych/mobile_cMST/append_log.php http://www.stark-labs.com/exp/jsPsych/mobile_cMST/write_data_file.php; 
-style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css; media-src *; 
-img-src 'self' https://starklab.bio.uci.edu data: content:;">  
+ <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:  'unsafe-inline' 'unsafe-eval' 
+        https://fonts.gstatic.com http://www.stark-labs.com/exp/jsPsych/mobile_cMST/append_log.php http://www.stark-labs.com/exp/jsPsych/mobile_cMST/write_data_file.php; 
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css; media-src *; 
+      img-src 'self' data: content:;">
       
   <script type="text/javascript" src="jatos.js"></script>
   <script type="text/javascript" src="js/index.js"></script>
@@ -156,26 +156,18 @@ function leftFillNum(num, width){
   .padStart(width,0)
 }
 
+
 jatos.onLoad(async function() {
-  baseurl='https://starklab.bio.uci.edu/mst/'; // How we'll get images, videos, etc.  Set to empty string to use local folders
+  //baseurl='https://starklab.bio.uci.edu/mst/'; // How we'll get images, videos, etc.  Set to empty string to use local folders
   baseurl=''
   var debug=0;
   var sid=jatos.studySessionData['sid'];
   if (typeof sid === 'undefined') {
-    if (typeof jatos.workerId !== 'undefined') { // At least try the workerID 
-      sid = jatos.workerId;
-    }
-    else {
-      sid='1234';
-    }
+    sid=1234;
   }
   var resp_mode='keyboard';
   if (jatos.studySessionData['resp_mode'] == 'button') {
     resp_mode='button';
-  }
-  if (typeof jatos.studyJsonInput['resp_mode'] !== 'undefined') { // Let this override
-    resp_mode = jatos.studyJsonInput['resp_mode'];
-    console.log('set to button mode via studyJson');
   }
   var stim_set='1';
   if (typeof jatos.studySessionData['set_mst'] !== 'undefined') {
@@ -189,31 +181,9 @@ jatos.onLoad(async function() {
   if (typeof jatos.studySessionData['trialorder'] !== 'undefined') {
     trialorder=jatos.studySessionData['trialorder'];
   }
-  var nstimper='64';
-  if (typeof jatos.studySessionData['nstimper'] !== 'undefined') {
-    nstimper=jatos.studySessionData['nstimper'];
-  }
-  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_nstimper'] !== 'undefined') {
-    nstimper=jatos.componentJsonInput['force_nstimper'];
-    console.log('nstimper forced via JSON component to ' + nstimper);
-  }
-  var subset='';
-  if (typeof jatos.studySessionData['subset'] !== 'undefined') {
-    subset=jatos.studySessionData['subset'];
-  }
-  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_subset'] !== 'undefined') {
-    subset=jatos.componentJsonInput['force_subset'];
-    console.log('Stim subset forced via JSON component to ' + subset);
-  }
-  if (nstimper=='32' && subset=='') {
-    subset='a';
-  }
-  if (nstimper=='64') {
-    subset='';
-  }
-  var selfpaced=0;
-  if (typeof jatos.studySessionData['selfpaced'] !== 'undefined') {
-    selfpaced = jatos.studySessionData['selfpaced']
+  var run='1';
+  if (typeof jatos.studySessionData['run'] !== 'undefined') {
+    run=jatos.studySessionData['run'];
   }
   var twochoice=0;
   if (typeof jatos.studySessionData['twochoice'] !== 'undefined') {
@@ -223,16 +193,16 @@ jatos.onLoad(async function() {
     twochoice=jatos.componentJsonInput['force_twochoice'];
     console.log('Two-choice mode forced via JSON component to ' + twochoice);
   }
-  var instruct=1;
-  if (typeof jatos.studySessionData['instruct'] !== 'undefined') {
-    instruct = jatos.studySessionData['instruct']
+  var selfpaced=0;
+  if (typeof jatos.studySessionData['selfpaced'] !== 'undefined') {
+    selfpaced = jatos.studySessionData['selfpaced']
   }
-  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_instruct'] !== 'undefined') {
-    instruct=jatos.componentJsonInput['force_instruct'];
-    console.log('Instructions forced via JSON component to ' + instruct);
+  var orderprefix = 'jsOrders/ContMST_256_';
+  if (jatos.componentJsonInput && typeof jatos.componentJsonInput['force_orderprefix'] !== 'undefined') {
+    orderprefix=jatos.componentJsonInput['force_orderprefix'];
+    console.log('Order prefix forced via JSON component to ' + orderprefix);
   }
-  var orderfile = 'jsOrders/MST_' + nstimper + '_s'+stim_set+'_p2_o'+trialorder+subset+'.js'
-
+  var orderfile = orderprefix+stim_set+'_'+trialorder+'_'+run+'.js';
 
   console.log('loading ' + orderfile)
   $.getScript(orderfile,function( data, textStatus, jqxhr) {
@@ -247,21 +217,23 @@ jatos.onLoad(async function() {
   console.log(trial_stim.length)
   const preload_fnames = new Array(trial_stim.length)
   for (var i=0; i<trial_stim.length; i++) {  // Make our Set X_rs be SetX_rs
-    trial_stim[i].stim=baseurl+trial_stim[i].stim.replace("Set ","Set");
-    preload_fnames[i]=trial_stim[i].stim;
+    trial_stim[i].image=trial_stim[i].image.replace("Set ","Set");
+    preload_fnames[i]=trial_stim[i].image;
   }
+  
+  //console.log(typeof trial_stim);
 
   // START OF CODE THAT SHOULD BE CONSTANT REGARDLESS OF JATOS / CORDOVA
-  const phasename='mstt';
+  const phasename='ContMST';
   var jsPsych = initJsPsych({on_finish: function() {
-      if (0) { jsPsych.data.displayData(); }
+    if (0) { jsPsych.data.displayData(); }
       else {
         var order=jatos.studySessionData["order"];
         jatos.studySessionData["taskindex"] += 1;
         var expdata = jsPsych.data.get().json();
         // Submit results to JATOS and queue the end or next task
         if (typeof order === 'undefined' || order.length == jatos.studySessionData["taskindex"]) { 
-            // we're done
+          // we're done
           // Check if this came from SONA - should have URL.sid and .sona
           if (typeof jatos.urlQueryParameters.sid === 'undefined' || typeof jatos.urlQueryParameters.sona === 'undefined' ||
               typeof jatos.studyJsonInput['experiment_id'] === 'undefined' || typeof jatos.studyJsonInput['credit_token'] === 'undefined') {
@@ -274,8 +246,8 @@ jatos.onLoad(async function() {
           }
         }
         else {
-            // submit and start the next
-            jatos.submitResultData(expdata, () => { jatos.startComponentByPos(order[jatos.studySessionData["taskindex"]]) });
+          // submit and start the next
+          jatos.submitResultData(expdata, () => { jatos.startComponentByPos(order[jatos.studySessionData["taskindex"]]) });
         }
       }
     }
@@ -286,11 +258,11 @@ jatos.onLoad(async function() {
     subject: sid,
     set: stim_set,
     selfpaced: selfpaced,
-    twochoice: twochoice,
-    nstimper: nstimper,
     orderfile: orderfile
   });
-  // Default is keyboard here - override if buttons
+
+
+  // Setup prompts and response options based on keyboard/button and 2/3 choices
   var instr_choice=[' ']; // 32 is space
   var instr_txt='<i>spacebar</i>';
   var trial_txt='Old (<b>v</b>), Similar (<b>b</b>), or New? (<b>n</b>)';
@@ -311,56 +283,58 @@ jatos.onLoad(async function() {
       trial_choices=['Old','Similar','New'];
     }
   }
+
+  // var instr1_trial = {
+  //   type: 'html-'+resp_mode+'-response',
+  //   choices: instr_choice,
+  //   prompt: '<p>Press ' + instr_txt + ' to begin</p>',
+  //   margin_horizontal: '40px', margin_vertical: '20px',
+  //   stimulus: '<p>In this task, you will see objects appear on the screen, one after the other. \
+  //       Your job is to determine if the object is <i>exactly the same</i> as any shown earlier \
+  //       during this task.</p>'
+  // }
   var instr1_trial = {
     type: (resp_mode == 'button' ? jsPsychHtmlButtonResponse : jsPsychHtmlKeyboardResponse),
     choices: instr_choice,
     prompt: '<p>Press ' + instr_txt + ' to begin this next task</p>',
     margin_horizontal: '40px', margin_vertical: '20px',
 //        button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
-    stimulus: '<p>' + trial_txt + ' task</p>'
+    stimulus: '<p>Continuous ' + trial_txt + ' task</p>'
   }
   var vid_instr_trial = {
     type: (resp_mode == 'button' ? jsPsychVideoButtonResponse : jsPsychVideoKeyboardResponse),
     choices: instr_choice,
-    //prompt: '<p>Press ' + instr_txt + ' to begin</p>',
+    prompt: '<p>Press ' + instr_txt + ' to begin</p>',
     margin_horizontal: '40px', margin_vertical: '20px',
     autoplay: true,
-    response_allowed_while_playing: false,
     controls: true,
-    prompt: "<i>If the picture disappears before you respond, don't worry. Just make your response even if the screen is blank.</i>",
-    //start: 0.1,
-    //controls: true,
+    response_allowed_while_playing: false,
 //        button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
-//    stimulus: (twochoice==1 ? (resp_mode=='button' ? [baseurl+'vid/ON_TestInstructs_Buttons_Q32_F15.mp4'] : [baseurl+'vid/ON_TestInstructs_Keyboard_Q32_F15.mp4']) : 
-//    (resp_mode=='button' ? [baseurl+'vid/OSN_TestInstructs_Buttons_Q32_F15.mp4'] : [baseurl+'vid/OSN_TestInstructs_Keyboard_Q32_F15.mp4']) )
-    stimulus: (twochoice==1 ? (resp_mode=='button' ? ['vid/ON_TestInstructs_Buttons_Q32_F15.mp4'] : ['vid/ON_TestInstructs_Keyboard_Q32_F15.mp4']) : 
-    (resp_mode=='button' ? ['vid/OSN_TestInstructs_Buttons_Q32_F15.mp4'] : ['vid/OSN_TestInstructs_Keyboard_Q32_F15.mp4']) )
-
+    stimulus: (twochoice==1 ? (resp_mode=='button' ? ['vid/MS_Objs_ON_Continuous_Q32_F15.mp4'] : ['vid/MS_Objs_ON_Continuous_Q32_F15.mp4']) : 
+    (resp_mode=='button' ? ['vid/MS_Objs_OSN_Continuous_Q32_F15.mp4'] : ['vid/MS_Objs_OSN_Continuous_Q32_F15.mp4']) )
   }
   if (navigator.userAgent.indexOf("Edg") > 0) {
     vid_instr_trial.start=0.1;
     console.log("Adjusted video start time for Edge");
     console.log(vid_instr_trial.start);
   };
-//
 
   // Build up my actual trial timeline
   var tlv = [];
   var ntrials = trial_stim.length;
-  if (debug) { ntrials=5; }
-
-  console.log('Building up the ' + ntrials  )
+  let DEBUGMODE=0;
+  if (DEBUGMODE == 1) { ntrials = 20; }
+  console.log('Building up the ' + ntrials + ' trials')
   for (var i=0; i<ntrials; i++) {
     // in corr_resp: 0=old, 1=sim, 2=new
     trial_info=trial_stim[i]
     let tr_type='foil';
-    let cresp='n';
-    //let lbin=0;
-    if (trial_info.cond == 'TR') {
+    let cresp='n'
+    if (trial_info.correct_resp == 0) {
       tr_type = 'target';
       cresp='o';
     }
-    else if (trial_info.cond == 'TL') {
+    else if (trial_info.correct_resp == 1) {
       tr_type='lure';
       if (twochoice == 1) {
         cresp='n';
@@ -369,9 +343,15 @@ jatos.onLoad(async function() {
         cresp='s';
       }
     }
-    //console.log('lure bin: '+trial_info.lbin)
+    let lure_bin=0;  // We may or may not have this in the order file
+    if (trial_info.lbin && trial_info.lbin !== 'undefined') {
+      lure_bin=trial_info.lbin;
+    }
+    // keycode 'n' (for 1 and 2) = 78, 'y' (for 0)=89
     // keycode 'n' (for 1 and 2) = 78, 'y' (for 0)=89, i=73, o=79
-    let obj={stimulus: trial_info.stim, data: {condition: trial_info.cond, correct_response: cresp, lbin: trial_info.lbin}}
+    //let obj={stimulus: trial_info.image, data: {condition: tr_type, correct_response: cresp, lbin:lure_bin}}
+    let obj={stimulus: trial_info.image, data: {condition: tr_type, correct_response: cresp, lbin:lure_bin}}
+    //console.log(i + '  bin: ' + lure_bin)
     tlv.push(obj)
   }
   //console.log(JSON.stringify(tlv))
@@ -379,33 +359,22 @@ jatos.onLoad(async function() {
     timeline: [
       {
       type: (resp_mode == 'button' ? jsPsychImageButtonResponse : jsPsychImageKeyboardResponse),
-      prompt: '<p>Is this ' + trial_txt + '?</p>',
+      prompt: '<p>Did you see this before? Is it ' + trial_txt + '?</p>',
       choices: trial_choices,
       stimulus_duration: 2000,
       trial_duration: (selfpaced==1 ? null : 2500),
       post_trial_gap: 500,
-//            response_ends_trial: false,
       margin_horizontal: '40px', margin_vertical: '20px',
       stimulus: jsPsych.timelineVariable('stimulus'),
       data: jsPsych.timelineVariable('data'),
-//            button_html: '<button style="font-size: 150%" class="jspsych-btn">%choice%</button>',
       stimulus_height: 400,
       stimulus_width: 400,
       on_finish: function(data) {
         // yes = button 0 = 'y' = keycode 89
         // no = button 1 = 'n' = keycode 78 
-        // indoor = button 0 = 'i' = keycode 73
-        // outdoor = button 1 = 'o' = keycode 79
-        // indoor = button 0 = 'v' = keycode 86
-        // outdoor = button 1 = 'n' = keycode 78
-        //
-        // old = button 0 = 'v' = keycode 86
-        // similar = button 1 = 'b' = keycode 66
-        // new = button 2 = 'n' = keycode 78
-        // OR
-        // old = button 0 = 'v' = keycode 86
-        // new = button 1 = 'n' = keycode 78
-        // 
+        // let resp = 'n';
+        // if (resp_mode == 'button' && data.button_pressed == 0) { resp = 'y' }
+        // if (resp_mode == 'keyboard' && data.key_press == 89 ) { resp = 'y' }
         let resp = null;
         if (resp_mode == 'button') {
             if (data.response == 0) { resp = 'o' }
@@ -417,11 +386,9 @@ jatos.onLoad(async function() {
             else if (data.response == 'b' ) { resp = 's' }
             else if (data.response == 'n') { resp = 'n' }
         } 
+ 
         data.correct =  resp == data.correct_response;
-
         data.resp = resp;
-        //console.log('Resp: ' + data.response + ' ' + data.resp + '  Cresp: ' + data.correct_response + '  corr: ' + data.correct)
-        //console.log(JSON.stringify(data))
       }
     }],
     timeline_variables: tlv
@@ -429,23 +396,17 @@ jatos.onLoad(async function() {
   var debrief_block = {
     type: jsPsychHtmlKeyboardResponse,
     trial_duration: 500,
-    stimulus: '<p>Thank you</p>',
-    on_finish: function(data) {
+    stimulus: 'Thank you',
+    on_finish: function (data) {
       let validtrials=jsPsych.data.get().filterCustom(function(trial) {
         return trial.resp !== null; 
       })
-      // console.log(validtrials.count());
-      // let validtrials2=jsPsych.data.get().filterCustom(function(trial) {
-      //     return trial.rt !== null; 
-      // })
-      // console.log(validtrials2.count());
-      // let validtrials3=jsPsych.data.get().filterCustom(function(trial) {
-      //     return (trial.rt==null ? false : true ); 
-      // })
-      // console.log(validtrials3.count());
-      let targets=validtrials.filter({condition: 'TR'});
-      let lures=validtrials.filter({condition: 'TL'});
-      let foils=validtrials.filter({condition: 'TF'});
+      // let targets=jsPsych.data.get().filter({condition: 'target'});
+      // let lures=jsPsych.data.get().filter({condition: 'lure'});
+      // let foils=jsPsych.data.get().filter({condition: 'foil'});
+      let targets=validtrials.filter({condition: 'target'});
+      let lures=validtrials.filter({condition: 'lure'});
+      let foils=validtrials.filter({condition: 'foil'});
 
       if (twochoice==1) {
         let corr_targs = targets.filter({correct: true});
@@ -478,13 +439,10 @@ jatos.onLoad(async function() {
 
         let dpTF = invNormcdf(p_hit) - invNormcdf(p_fa_foil); 
         let dpTL = invNormcdf(p_hit) - invNormcdf(p_fa_lure); 
-        //return '<p>Hit rate: ' + hits + '</p><p>CR-L rate: ' + cr_lure + '</p><p>CR-F rate: ' + cr_foil + '</p>'
-        var retstr='Valid, ' + targets.count() + ", " + lures.count() + ', ' + foils.count() + '\n';
-        retstr += 'Correct, ' + corr_targs.count() + ", " + corr_lures.count() + ', ' + corr_foils.count() + '\n';
-        retstr += 'HR, ' + hits + ', CR-L, ' + cr_lure + ', CR-F rate, ' + cr_foil + ", d'T:F, " + dpTF.toFixed(3) + ", d'T:L, " + dpTL.toFixed(3);  
 
+        var retstr = 'HR, ' + hits + ', CR-L, ' + cr_lure + ', CR-F rate, ' + cr_foil + ", d'T:F, " + dpTF.toFixed(3) + ", d'T:L, " + dpTL.toFixed(3) 
       }
-      else {
+      else { // OSN
         let targ_old=targets.filter({resp: 'o'});
         let targ_sim=targets.filter({resp: 's'});
         let targ_new=targets.filter({resp: 'n'});
@@ -503,21 +461,27 @@ jatos.onLoad(async function() {
         retstr += 'Similar, ' + targ_sim.count() + ", " + lure_sim.count() + ', ' + foil_sim.count() + '\n';
         retstr += 'New, ' + targ_new.count() + ", " + lure_new.count() + ', ' + foil_new.count() + '\n';
         retstr += 'REC, ' + rec.toFixed(3) + ', LDI, ' + ldi.toFixed(3);
-        
+
       }
+      
       let date = new Date(); 
-      let dcode = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + (date.getDate()) + 
+      let dcode = date.getFullYear() + "-" + (date.getMonth()+1) + "-" + (date.getDate()+1) + 
         "-" + date.getHours() + "-" + date.getMinutes() + "-" + date.getSeconds();
+      
       if (!jatos.batchSession.defined("/" + sid)) {  // Should have this by now, but to be safe -- make sure to create this as an array
         jatos.batchSession.add("/" + sid,[phasename+"_"+dcode+"_"+retstr]);
       }
       else { // Append to array
         jatos.batchSession.add("/" + sid + "/-",phasename+"_"+dcode+"_"+retstr);
       }
-      data.summary=retstr;
+      data.summary = retstr;
+      //jatos.batchSession.add("/"+idcode,{ [phasename + "_results"]: data.summary });
+      //return '<p>Hit rate: ' + hits + '</p><p>CR-L rate: ' + cr_lure + '</p><p>CR-F rate: ' + cr_foil + '</p>'
+      //return 'HR, ' + hits + ', CR-L, ' + cr_lure + ', CR-F rate, ' + cr_foil + ", d'T:F, " + dpTF.toFixed(3) + ", d'T:L, " + dpTL.toFixed(3) 
     }
   }
 
+  // END OF CONSTANT CODE
   var preload = {
     type: jsPsychPreload,
     images: preload_fnames, // since we use a timeline variable, we can't use the simple "trials"
@@ -532,9 +496,10 @@ jatos.onLoad(async function() {
       console.log('Failed on ' + data.failed_images.length)
     }
   }
-  var timeline = (instruct==1 ? [preload, instr1_trial, vid_instr_trial, test_trials, debrief_block] : [preload, instr1_trial, test_trials, debrief_block] );
+  
+  var timeline = [preload, instr1_trial, vid_instr_trial, test_trials, debrief_block];
   jsPsych.run(timeline);
-    
+
 });
 </script>
 

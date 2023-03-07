@@ -5,6 +5,8 @@
 
   Collects an ID code
 
+  2/8/23 (CELS): Converted to jsPsych7
+
 -->
 <head>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap:  'unsafe-inline' 'unsafe-eval' 
@@ -14,9 +16,9 @@
 
   <script type="text/javascript" src="jatos.js"></script>
   <script type="text/javascript" src="js/index.js"></script>
-  <script src="js/jspsych.js"></script>
-  <script src="js/plugins/jspsych-survey-html-form.js"></script>
-  <link rel="stylesheet" href="css/jspsych.css"></link>
+  <script src="js/jspsych_731/dist/jspsych.js"></script>
+  <script src="js/jspsych_731/dist/plugin-survey-html-form.js"></script>
+  <link rel="stylesheet" href="js/jspsych_731/dist/jspsych.css"></link>
   <style>
     .jspsych-display-element {
       font-size: 200%;
@@ -30,52 +32,9 @@
 
 </body>
 <script>
-/* function getID() {
-  // Try to get a reasonable ID code for this person
-  // URL > studySession > workerID
-  var sid=jatos.urlQueryParameters.sid;
-  if (sid == undefined) {
-    sid=jatos.studySessionData['sid'];
-  }
-  if (typeof sid == 'undefined') {
-    if (typeof jatos.workerId !== 'undefined') { // At least try the workerID 
-      sid = jatos.workerId;
-    }
-    else { sid=1234; }
-  }
-  return sid
-} */
+
 jatos.onLoad(function() {
-  //var sid=getID()
-  //console.log('In id, sid= ' + sid);
-  let date = new Date(); 
-  jsPsych.data.addProperties({
-       //subject: sid,
-       task: 'getid',
-       date: date.toLocaleDateString()
-       //urlid: jatos.urlQueryParameters.sid,
-  });
-
-  var idform = {
-    type: 'survey-html-form',
-    preamble: 'Enter your ID code',
-    html: '<div style="text-align: left; font-size: 16px; line-height: 110%"> \
-    <p><b>ID: </b> <input name="idcode" type="text" required /></p> \
-    </div>',
-    on_finish: function(data) {
-      console.log(data.response)
-      var sid=data.response['idcode'];
-      console.log(sid);
-      jatos.studySessionData['sid']=sid;
-    }
-
-  }
-  
-  
-
-  jsPsych.init({
-    timeline: [idform],
-    
+  var jsPsych = initJsPsych({
     on_finish: function() {
       if (0) { jsPsych.data.displayData(); }
       else {
@@ -104,6 +63,36 @@ jatos.onLoad(function() {
       }
     }
   });
+
+  //var sid=getID()
+  //console.log('In id, sid= ' + sid);
+  let date = new Date(); 
+  jsPsych.data.addProperties({
+       //subject: sid,
+       task: 'getid',
+       date: date.toLocaleDateString()
+       //urlid: jatos.urlQueryParameters.sid,
+  });
+
+  var idform = {
+    type: jsPsychSurveyHtmlForm,
+    preamble: 'Enter your ID code',
+    html: '<div style="text-align: left; font-size: 16px; line-height: 110%"> \
+    <p><b>ID: </b> <input name="idcode" type="text" required /></p> \
+    </div>',
+    on_finish: function(data) {
+      console.log(data.response)
+      var sid=data.response['idcode'];
+      console.log(sid);
+      jatos.studySessionData['sid']=sid;
+    }
+
+  }
+  
+
+  var timeline=[idform];
+  jsPsych.run(timeline);
+
 });
 </script>
 
